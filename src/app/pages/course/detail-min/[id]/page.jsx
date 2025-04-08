@@ -1,0 +1,91 @@
+"use client"
+import Footer from "@/components/Footer";
+import BannerVideo from "./components/BannerVideo";
+import CourseDetails from "./components/CourseDetails";
+import TopNavigationBar from "./components/TopNavigationBar";
+import { useParams } from "next/navigation";
+import { useState, useEffect } from "react";
+import { checkIsLoggedInUser } from "@/helpers/checkLoggedInUser";
+import axiosInstance from "@/utils/axiosInstance";
+
+const DetailMinimal = () => {
+  const params = useParams();
+  const courseId = params?.id;
+  const [course, setCourse] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [currentVideo, setCurrentVideo] = useState(null);
+
+  console.log(courseId, "-------------d")
+  useEffect(() => {
+    const fetchCourse = async () => {
+      if (!courseId) return;
+
+      console.log(courseId, "----------------")
+      try {
+        setIsLoading(true);
+
+        // Get courses from localStorage
+        const coursesStr = localStorage.getItem('courses');
+        if (!coursesStr) {
+          console.error('No courses found in localStorage');
+          setIsLoading(false);
+          return;
+        }
+
+        const courses = JSON.parse(coursesStr);
+        const course = courses.find(c => c.id === courseId);
+
+        if (!course) {
+          console.error(`Course with ID ${courseId} not found`);
+          setIsLoading(false);
+          return;
+        }
+
+        // Format the course data to match the expected structure
+        const courseData = {
+          course: {
+            ...course,
+            modules_count: course.modulesCount || 4,
+            short_description: course.shortDesription || '',
+          },
+          lectures: course.lectures || [],
+          faqs: course.faqs || [],
+          tags: course.tags || [],
+        };
+
+        setCourse(courseData);
+        console.log(courseData);
+
+        // Generate lecture groups dynamically based on module count
+        const moduleCount = courseData.course.modules_count || 0;
+      } catch (error) {
+        console.error("Error fetching course:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchCourse();
+  }, [courseId]);
+
+  const handleVideoSelect = (video) => {
+    setCurrentVideo(video);
+
+    console.log(video, "in the page")
+  };
+  console.log(currentVideo, "in the ccccccccccccc")
+
+  if (isLoading) {
+    return <div>Loading course...</div>;
+  }
+
+  return <>
+    <TopNavigationBar />
+    <main>
+      <BannerVideo course={course} selectedVideo={currentVideo} onVideoSelect={handleVideoSelect} />
+      <CourseDetails course={course} onVideoSelect={handleVideoSelect} />
+    </main>
+    <Footer className="bg-light" />
+  </>;
+};
+export default DetailMinimal;

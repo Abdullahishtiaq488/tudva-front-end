@@ -1,0 +1,189 @@
+.merienda-text {
+    font-family: var(--font-merienda), cursive !important;
+}
+
+/* src/components/YourComponent/YourComponent.module.css */
+/* Or wherever your component's CSS is */
+
+.h-60vh {
+    height: 60vh;
+}
+
+.w-80 {
+    width: 80%;
+}
+
+.font-semibold {
+    font-weight: 500;
+}
+
+.font-normal {
+    font-weight: 300;
+}
+
+.text-primary-hover a:hover {
+    color: var(--bs-primary-hover) !important;
+}
+
+.nav-link:hover,
+.nav-link:focus {
+    color: var(--bs-gray-400);
+}
+
+.xxx-large {
+    font-size: 1.5rem;
+    /* Default size (for extra small screens) */
+}
+
+/* Small devices (sm) */
+@media (min-width: 576px) {
+    .xxx-large {
+        font-size: 1.75rem;
+        /* Slightly larger */
+    }
+}
+
+/* Medium devices (md) */
+@media (min-width: 768px) {
+    .xxx-large {
+        font-size: 2rem;
+        /* Larger */
+    }
+
+    .h-md-200px {
+        height: 115px !important;
+    }
+    .h-md-114px {
+        height: 114px !important;
+    }
+
+    .xx-large {
+        font-size: 1.8rem !important;
+    }
+}
+
+/* Large devices (lg) */
+@media (min-width: 992px) {
+    .xxx-large {
+        font-size: 2.5rem;
+        /* Larger */
+    }
+}
+
+/* Extra large devices (xl) */
+@media (min-width: 1200px) {
+    .xxx-large {
+        font-size: 3rem;
+        /* Larger */
+    }
+}
+
+/* Extra extra large devices (xxl) */
+@media (min-width: 1400px) {
+    .xxx-large {
+        font-size: xxx-large;
+    }
+}
+
+.xx-large {
+    font-size: 1.2rem;
+    /* Default size (xs) - Adjust as needed*/
+}
+
+/* .mb-md-10 {
+    margin-bottom: 2rem !important;
+} */
+
+.accordion {
+    --bs-accordion-active-bg: #e7e7e4;
+    --bs-accordion-inner-border-radius: 1rem;
+}
+
+.accordion-item {
+    background: #e7e7e4;
+    margin-bottom: .5rem;
+    border: none;
+    border-radius: 1rem !important;
+}
+
+.accordion-button:not(.collapsed) {
+    background: #e7e7e4;
+    border-radius: 1rem !important;
+}
+
+.accordion-item .accordion-header .accordion-button.collapsed {
+    background: #e7e7e4 !important;
+    border-radius: 1rem !important;
+}
+
+hr {
+    margin: 1rem 0;
+    color: #1c540c;
+    border: 0;
+    border-top: 2px solid;
+}
+
+.h-150px {
+    height: 150px;
+}
+
+.h-80 {
+    height: 80%;
+}
+
+.w-90 {
+    width: 90%;
+}
+
+.navbar-nav {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    width: 55% !important;
+    justify-content: space-around !important;
+    max-width: 778px !important;
+}
+
+.me-5r {
+    margin-right: 5rem;
+}
+
+@media (min-width: 576px) {
+    .xx-large {
+        font-size: 1.5rem;
+    }
+
+    .h-sm-250px {
+        height: 250px !important;
+    }
+
+    .h-sm-80 {
+        height: 80% !important;
+    }
+}
+
+
+
+@media (min-width: 992px) {
+    .xx-large {
+        font-size: 2.2rem;
+    }
+}
+
+
+@media (max-width: 1199.98px) {
+    .navbar-expand-xl .navbar-brand .navbar-brand-item {
+        height: 32px !important;
+    }
+}
+
+@media (min-width: 1200px) {
+    .xx-large {
+        font-size: 2.5rem;
+    }
+}
+
+@media (min-width: 1400px) {
+    .xx-large {
+        font-size: xx-large;
+    }
+}
