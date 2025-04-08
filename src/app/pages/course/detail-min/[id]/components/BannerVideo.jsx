@@ -11,17 +11,17 @@ import Playlist from "./Playlist";
 const Plyr = dynamic(() => import("plyr-react"));
 import "plyr-react/plyr.css";
 
-const BannerVideo = ({ course,selectedVideo }) => {
+const BannerVideo = ({ course, selectedVideo }) => {
   const { width } = useViewPort();
   const { isTrue: isOpen, toggle } = useToggle();
-  
+
   const [currentVideo, setCurrentVideo] = useState(null);
   const [videoSource, setVideoSource] = useState(selectedVideo);
 
 
 
 
-  console.log("\n\n\n\n\n",selectedVideo?.videoUrl,'in the banner video')
+  console.log("\n\n\n\n\n", selectedVideo?.videoUrl, 'in the banner video')
   // Set default video if course data is available
   useEffect(() => {
     if (course && course.modules) {
@@ -75,15 +75,18 @@ const BannerVideo = ({ course,selectedVideo }) => {
                   //   controls
                   //   source={videoSource.videoUrl}
                   // />
-                  <video 
-  controls 
-  loop 
-  className="w-full mt-6 rounded-lg shadow-lg max-h-[500px] object-cover"
-  onError={(e) => console.error("Video error:", e)}
->
-  <source src={selectedVideo?.videoUrl || currentVideo?.videoUrl} type="video/mp4" />
-  Your browser does not support the video tag.
-</video>
+                  <video
+                    controls
+                    className="w-100 rounded-lg shadow-lg"
+                    style={{ maxHeight: '500px', objectFit: 'contain' }}
+                    onError={(e) => console.error("Video error:", e)}
+                  >
+                    <source
+                      src={selectedVideo?.videoUrl || currentVideo?.videoUrl || 'https://www.youtube.com/embed/tXHviS-4ygo'}
+                      type="video/mp4"
+                    />
+                    Your browser does not support the video tag.
+                  </video>
                 ) : (
                   <div className="text-center p-5 bg-light rounded-3">
                     <h4>No video selected or available</h4>

@@ -74,6 +74,27 @@ export default function RootLayout({ children }) {
 
       <NextTopLoader color="#4697ce" showSpinner={false} />
       <div id="__next_splash">
+        <Toaster position="top-right" toastOptions={{
+          duration: 3000,
+          style: {
+            background: '#fff',
+            color: '#333',
+          },
+          success: {
+            style: {
+              background: '#ECFDF5',
+              color: '#065F46',
+              border: '1px solid #6EE7B7',
+            },
+          },
+          error: {
+            style: {
+              background: '#FEF2F2',
+              color: '#B91C1C',
+              border: '1px solid #FECACA',
+            },
+          },
+        }} />
         <AppProvidersWrapper>
           <Suspense fallback={<FallbackLoading />}>
             <Layout>

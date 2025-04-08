@@ -47,11 +47,82 @@ const DetailMinimal = () => {
             ...course,
             modules_count: course.modulesCount || 4,
             short_description: course.shortDesription || '',
+            level: course.level || 'Beginner',
+            instructor: {
+              name: 'Instructor Name',
+              title: 'Course Instructor',
+              avatar: '/assets/images/avatar/01.jpg',
+              bio: 'Experienced instructor with expertise in this subject.',
+              id: course.instructor_id || 'local_instructor'
+            },
+            rating: 4.5,
+            enrolled: Math.floor(Math.random() * 1000) + 100, // Random number for enrolled students
+            price: course.price || 0,
+            duration: '10 weeks',
+            language: course.language || 'English',
+            certificate: true,
+            updated_at: course.updatedAt || new Date().toISOString()
           },
           lectures: course.lectures || [],
           faqs: course.faqs || [],
           tags: course.tags || [],
+          reviews: [
+            {
+              id: 1,
+              user: {
+                name: 'John Doe',
+                avatar: '/assets/images/avatar/02.jpg'
+              },
+              rating: 5,
+              date: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+              comment: 'Great course! I learned a lot from this course.'
+            },
+            {
+              id: 2,
+              user: {
+                name: 'Jane Smith',
+                avatar: '/assets/images/avatar/03.jpg'
+              },
+              rating: 4,
+              date: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
+              comment: 'Very informative and well-structured course.'
+            }
+          ]
         };
+
+        // Create modules from lectures
+        if (course.lectures && course.lectures.length > 0) {
+          // Group lectures by module
+          const moduleMap = {};
+          course.lectures.forEach(lecture => {
+            const moduleName = lecture.moduleName || 'Module 1';
+            if (!moduleMap[moduleName]) {
+              moduleMap[moduleName] = [];
+            }
+            moduleMap[moduleName].push({
+              id: lecture.id,
+              title: lecture.topicName,
+              description: lecture.description,
+              duration: '10:00',
+              videoUrl: lecture.videoFile || 'https://www.youtube.com/embed/tXHviS-4ygo',
+              watched: false
+            });
+          });
+
+          courseData.modules = moduleMap;
+        } else {
+          // Create sample modules if no lectures exist
+          courseData.modules = {
+            'Module 1': [
+              { id: 1, title: 'Introduction', duration: '10:00', videoUrl: 'https://www.youtube.com/embed/tXHviS-4ygo', watched: false },
+              { id: 2, title: 'Getting Started', duration: '15:00', videoUrl: 'https://www.youtube.com/embed/tXHviS-4ygo', watched: false }
+            ],
+            'Module 2': [
+              { id: 3, title: 'Basic Concepts', duration: '12:00', videoUrl: 'https://www.youtube.com/embed/tXHviS-4ygo', watched: false },
+              { id: 4, title: 'Advanced Topics', duration: '18:00', videoUrl: 'https://www.youtube.com/embed/tXHviS-4ygo', watched: false }
+            ]
+          };
+        }
 
         setCourse(courseData);
         console.log(courseData);

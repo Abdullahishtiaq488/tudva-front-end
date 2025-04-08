@@ -289,7 +289,7 @@ const TopNavigationBar = () => {
           <ul className="nav flex-row justify-content-center align-items-center list-unstyled ms-xl-auto">
             <Button size="sm" variant="danger-soft" className="mb-0 !mr-2 px-4">My Learning</Button>
             <li className="nav-item ms-0 ms-sm-2 d-none d-sm-block">
-              <a className="btn btn-light btn-round mb-0" href="#"> <BsHeart className="fa-fw" /></a>
+              <Link className="btn btn-light btn-round mb-0" href="/shop/wishlist"> <BsHeart className="fa-fw" /></Link>
             </li>
             <NotificationDropdown />
             {isLoggedInUser !== null ?
