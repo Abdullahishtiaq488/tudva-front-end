@@ -74,17 +74,19 @@ export default function RootLayout({ children }) {
 
       <NextTopLoader color="#4697ce" showSpinner={false} />
       <div id="__next_splash">
-        <Toaster position="top-right" toastOptions={{
+        <Toaster position="top-center" toastOptions={{
           duration: 3000,
           style: {
             background: '#fff',
             color: '#333',
+            zIndex: 9999,
           },
           success: {
             style: {
               background: '#ECFDF5',
               color: '#065F46',
               border: '1px solid #6EE7B7',
+              zIndex: 9999,
             },
           },
           error: {
@@ -92,6 +94,7 @@ export default function RootLayout({ children }) {
               background: '#FEF2F2',
               color: '#B91C1C',
               border: '1px solid #FECACA',
+              zIndex: 9999,
             },
           },
         }} />

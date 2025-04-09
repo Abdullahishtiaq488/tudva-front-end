@@ -8,7 +8,7 @@ import { Card, CardBody, CardHeader, Col, Row, Form } from 'react-bootstrap';
 import { BsPlus, BsX, BsTrash, BsEnvelopeFill } from 'react-icons/bs';
 import Image from 'next/image';
 import axios from 'axios';
-import { toast, Toaster } from 'react-hot-toast'; // Correct import
+import { toast } from 'react-hot-toast'; // Import toast
 import { checkIsLoggedInUser } from "@/helpers/checkLoggedInUser"; // Import your function
 import IconTextFormInput from '@/components/form/IconTextFormInput'; // Import
 import { FaUser } from 'react-icons/fa'; // Import icons
@@ -220,7 +220,6 @@ const EditProfile = () => {
 
   return (
     <>
-      <Toaster position="top-center" /> {/* Add Toaster component */}
       <Card className="bg-transparent border rounded-3">
         <CardHeader className="bg-transparent border-bottom">
           <h3 className="card-header-title mb-0">Edit Profile</h3>

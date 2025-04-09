@@ -187,3 +187,63 @@ hr {
         font-size: xx-large;
     }
 }
+
+/* Custom styles to fix navbar and dropdown issues */
+
+/* Fix navbar background */
+.navbar {
+  background-color: #ffffff !important;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1) !important;
+  z-index: 1030 !important;
+}
+
+/* Fix dropdown menus */
+.dropdown-menu {
+  background-color: #ffffff !important;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15) !important;
+  z-index: 1050 !important;
+  border-radius: 0.5rem !important;
+  border: 1px solid rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Fix notification dropdown */
+.notification-dropdown .dropdown-menu {
+  z-index: 1060 !important;
+}
+
+/* Fix profile dropdown */
+.profile-dropdown .dropdown-menu {
+  z-index: 1060 !important;
+}
+
+/* Fix dropdown items */
+.dropdown-item {
+  padding: 0.5rem 1rem !important;
+}
+
+/* Fix dropdown item hover */
+.dropdown-item:hover, .dropdown-item:focus {
+  background-color: rgba(126, 170, 126, 0.1) !important;
+  color: #7EAA7E !important;
+}
+
+/* Fix dropdown item active */
+.dropdown-item.active, .dropdown-item:active {
+  background-color: #7EAA7E !important;
+  color: #ffffff !important;
+}
+
+/* Fix navbar toggler */
+.navbar-toggler {
+  z-index: 1040 !important;
+}
+
+/* Fix navbar collapse */
+.navbar-collapse {
+  z-index: 1040 !important;
+}
+
+/* Fix navbar sticky */
+header.navbar-sticky-on {
+  z-index: 1030 !important;
+}

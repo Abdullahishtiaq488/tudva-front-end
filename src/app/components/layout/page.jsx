@@ -5,7 +5,6 @@ import React from 'react';
 import { usePathname } from 'next/navigation';
 import TopNavigationBar from '../navbar/TopNavigationBar'; // Adjust path if needed
 import Footer from '../footer/Footer';
-import { Toaster } from 'react-hot-toast';
 
 const excludedHeaderFooter = [
     '/auth/sign-up',
@@ -23,7 +22,6 @@ const Layout = ({ children }) => { // Receive children as a prop
 
     return (
         <>
-            <Toaster />
             {shouldShowHeaderFooter && <TopNavigationBar />}
             <main>
                 {children}

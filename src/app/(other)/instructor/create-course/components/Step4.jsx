@@ -206,14 +206,27 @@ const Step4 = ({ goBackToPreviousStep, onSubmit }) => {
 
         // Handle FAQs if they exist
         if (courseData.faqs && Array.isArray(courseData.faqs)) {
-          setValue('faqs', courseData.faqs);
+          console.log('Loading FAQs:', courseData.faqs);
+          // Ensure each FAQ has an id
+          const faqs = courseData.faqs.map(faq => ({
+            id: faq.id || uuidv4(),
+            question: faq.question,
+            answer: faq.answer
+          }));
+          setValue('faqs', faqs);
         } else {
           setValue('faqs', []);
         }
 
         // Handle tags if they exist
         if (courseData.tags && Array.isArray(courseData.tags)) {
-          setValue('tags', courseData.tags);
+          console.log('Loading tags:', courseData.tags);
+          // Ensure each tag has an id and tagName
+          const tags = courseData.tags.map(tag => ({
+            id: tag.id || uuidv4(),
+            tagName: tag.tagName || tag.tag_name || ''
+          }));
+          setValue('tags', tags);
         } else {
           setValue('tags', []);
         }

@@ -11,7 +11,7 @@ import { useForm, FormProvider } from 'react-hook-form'
 import * as yup from 'yup'
 import { yupResolver } from '@hookform/resolvers/yup'
 import axios from 'axios'
-import { toast, Toaster } from 'react-hot-toast'
+import { toast } from 'react-hot-toast'
 import { useRouter } from 'next/navigation'
 import useBSStepper from '@/hooks/useBSStepper'
 
@@ -118,7 +118,6 @@ const CreateCourseForm = () => {
 
   return (
     <section>
-      <Toaster position="top-center" />
       <Container>
         <Row>
           <Col md={8} className="mx-auto text-center">
