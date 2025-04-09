@@ -270,14 +270,72 @@ const Step3 = ({ goToNextStep, goBackToPreviousStep }) => {
 
       // Parse the current course
       const currentCourse = JSON.parse(currentCourseStr);
-      console.log(currentCourse);
+      console.log('Current course for curriculum generation:', currentCourse);
 
-      // Get the module count from the course data
-      const moduleCount = currentCourse.modulesCount || 4; // Default to 4 if not specified
+      // Check if the course has lectures
+      if (currentCourse.lectures && currentCourse.lectures.length > 0) {
+        console.log('Found existing lectures:', currentCourse.lectures);
 
-      // Create modules
-      for (let i = 0; i < moduleCount; i++) {
-        handleAddLectureGroup(`Module ${i + 1}`);
+        // Group lectures by module name
+        const lecturesByModule = {};
+        currentCourse.lectures.forEach(lecture => {
+          const moduleName = lecture.moduleName || 'Module 1';
+          if (!lecturesByModule[moduleName]) {
+            lecturesByModule[moduleName] = [];
+          }
+          lecturesByModule[moduleName].push(lecture);
+        });
+
+        console.log('Grouped lectures by module:', lecturesByModule);
+
+        // Create lecture groups from the grouped lectures
+        const moduleNames = Object.keys(lecturesByModule);
+        moduleNames.forEach(moduleName => {
+          // Add the lecture group
+          const groupIndex = lectureGroupFields.length;
+          handleAddLectureGroup(moduleName);
+
+          // Add the lectures to the group
+          const lectures = lecturesByModule[moduleName];
+          const currentGroups = getValues("lectureGroups");
+          const updatedGroups = [...currentGroups];
+
+          if (!updatedGroups[groupIndex]) {
+            console.warn(`Group at index ${groupIndex} not found.`);
+            return;
+          }
+
+          if (!updatedGroups[groupIndex].lectures) {
+            updatedGroups[groupIndex].lectures = [];
+          }
+
+          // Add each lecture to the group
+          lectures.forEach(lecture => {
+            updatedGroups[groupIndex].lectures.push({
+              id: lecture.id,
+              topicName: lecture.topicName,
+              description: lecture.description,
+              videoUrl: lecture.videoUrl,
+              moduleName: lecture.moduleName,
+              sortOrder: lecture.sortOrder
+            });
+          });
+
+          setValue("lectureGroups", updatedGroups);
+        });
+
+        console.log('Created lecture groups from existing lectures');
+      } else {
+        // No existing lectures, create empty modules
+        console.log('No existing lectures found, creating empty modules');
+
+        // Get the module count from the course data
+        const moduleCount = currentCourse.modulesCount || 4; // Default to 4 if not specified
+
+        // Create modules
+        for (let i = 0; i < moduleCount; i++) {
+          handleAddLectureGroup(`Module ${i + 1}`);
+        }
       }
     } catch (error) {
       console.error("Error fetching course:", error);

@@ -25,19 +25,38 @@ const DynamicIcon = ({ iconName }) => {
   // Check if the iconName is a custom icon (contains a file extension)
   if (iconName && (iconName.includes('.png') || iconName.includes('.jpg') || iconName.includes('.svg'))) {
     // Fix the path by removing spaces and ensuring correct format
-    const fixedPath = `/assets/all%20icons%2096px/${iconName}`;
-    console.log('Using icon path:', fixedPath);
+    // Try different path formats to ensure the icon is found
+    const paths = [
+      `/assets/all%20icons%2096px/${iconName}`,
+      `/assets/all icons 96px/${iconName}`,
+      `/public/assets/all%20icons%2096px/${iconName}`,
+      `/public/assets/all icons 96px/${iconName}`,
+      `/assets/icons/${iconName}`,
+      `/public/assets/icons/${iconName}`
+    ];
+
+    console.log('Trying icon paths:', paths);
 
     return (
       <img
-        src={fixedPath}
+        src={paths[0]}
         alt="Course Icon"
         className="w-25"
         style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
         onError={(e) => {
-          console.error('Failed to load icon:', fixedPath);
-          e.target.onerror = null;
-          e.target.src = '/assets/images/courses/4by3/01.jpg'; // Fallback image
+          console.error('Failed to load icon from primary path:', paths[0]);
+          // Try the next path
+          const currentPath = e.target.src;
+          const currentIndex = paths.findIndex(path => currentPath.endsWith(path));
+
+          if (currentIndex < paths.length - 1) {
+            console.log('Trying next path:', paths[currentIndex + 1]);
+            e.target.src = paths[currentIndex + 1];
+          } else {
+            console.error('All icon paths failed, using fallback image');
+            e.target.onerror = null;
+            e.target.src = '/assets/images/courses/4by3/01.jpg'; // Fallback image
+          }
         }}
       />
     );

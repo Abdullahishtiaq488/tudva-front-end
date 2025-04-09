@@ -34,16 +34,22 @@ const Step1 = ({ goToNextStep }) => {
           return;
         }
 
+        // Log the course data for debugging
+        console.log('Loading course for editing:', course);
+
         // Set form values
         setValue('courseId', courseId);
         setValue('title', course.title || '');
-        setValue('shortDescription', course.shortDesription || '');
+        setValue('shortDescription', course.shortDesription || course.short_description || '');
         setValue('description', course.description || '');
         setValue('category', course.category || '');
         setValue('level', course.level || '');
         setValue('language', course.language || '');
-        setValue('modulesCount', course.modulesCount || 4);
-        setValue('courseType', course.courseType || 'recorded');
+        setValue('modulesCount', course.modulesCount || course.modules_count || 4);
+        setValue('courseType', course.courseType || course.format || 'recorded');
+        setValue('color', course.color || '#ffffff');
+        setValue('icon', course.icon || '');
+        setValue('promoVideoUrl', course.promoVideoUrl || '');
 
         // Save the current course being edited
         localStorage.setItem('current_course', JSON.stringify(course));
