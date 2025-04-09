@@ -4,6 +4,8 @@ import { decodeJWT } from './utils/decodeToken';
 // This function can be marked `async` if using `await` inside
 export async function middleware(request) {
 
+
+    // iooetjwtjlwjtljwerl
     return NextResponse.next();
 
     // const path = request.nextUrl.pathname;
