@@ -3,7 +3,8 @@ import axios from 'axios';
 
 // Helper function to get auth token
 const getAuthHeader = () => {
-  const token = localStorage.getItem('auth_token');
+  // Try different token storage keys
+  const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
   return token ? { Authorization: `Bearer ${token}` } : {};
 };
 

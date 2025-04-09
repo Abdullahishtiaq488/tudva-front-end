@@ -10,7 +10,7 @@ const getBackendUrl = () => {
 export async function POST(request) {
   try {
     const body = await request.json();
-    
+
     // Validate required fields
     const requiredFields = ['content', 'rating', 'course_id'];
     for (const field of requiredFields) {
@@ -31,9 +31,43 @@ export async function POST(request) {
       }, { status: 401 });
     }
 
-    console.log('Sending review data to backend:', JSON.stringify(body, null, 2));
+    console.log('Sending review data to backend');
 
-    // Make request to backend
+    // Get user ID from the request body
+    const userId = body.userId || null;
+    if (!userId) {
+      console.warn('No userId provided in the request body');
+    }
+
+    // First try the file-based API
+    try {
+      console.log('Trying file-based API for creating review');
+      const fileResponse = await axios.post(
+        `${getBackendUrl()}/api/file-reviews`,
+        {
+          userId: userId,
+          courseId: body.course_id,
+          content: body.content,
+          rating: body.rating
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          timeout: 5000 // 5 second timeout
+        }
+      );
+
+      if (fileResponse.data && fileResponse.data.success) {
+        console.log('Successfully created review with file-based API:', fileResponse.data);
+        return NextResponse.json(fileResponse.data, { status: 201 });
+      }
+    } catch (fileError) {
+      console.warn('File-based API failed, trying regular API:', fileError.message);
+    }
+
+    // If file-based API fails, try the regular API
+    console.log('Trying regular API for creating review');
     const backendResponse = await axios.post(
       `${getBackendUrl()}/api/reviews`,
       body,
@@ -46,7 +80,7 @@ export async function POST(request) {
       }
     );
 
-    console.log('Backend response:', backendResponse.data);
+    console.log('Regular API response:', backendResponse.data);
 
     return NextResponse.json(backendResponse.data, { status: 201 });
   } catch (error) {

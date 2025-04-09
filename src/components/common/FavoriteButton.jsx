@@ -46,19 +46,30 @@ const FavoriteButton = ({
 
       try {
         setIsLoading(true);
+        console.log('Checking favorite status for course:', courseId, 'user:', user.userId || user.id);
+
+        // Try both methods in sequence
+        let favoriteStatus = false;
 
         // First try file-based wishlist API
         try {
-          const isInWishlistResult = await isInWishlist(user.userId, courseId);
-          setIsFavorite(isInWishlistResult);
+          const isInWishlistResult = await isInWishlist(user.userId || user.id, courseId);
           console.log('File-based wishlist check result:', isInWishlistResult);
+          favoriteStatus = isInWishlistResult;
         } catch (fileWishlistError) {
-          console.warn('Error checking file-based wishlist, falling back to database:', fileWishlistError);
+          console.warn('Error checking file-based wishlist:', fileWishlistError);
 
           // Fall back to database API
-          const response = await checkIsFavorite(courseId);
-          setIsFavorite(response.isFavorite);
+          try {
+            const response = await checkIsFavorite(courseId);
+            console.log('Database favorite check result:', response);
+            favoriteStatus = response.isFavorite;
+          } catch (dbError) {
+            console.warn('Error checking database favorites:', dbError);
+          }
         }
+
+        setIsFavorite(favoriteStatus);
       } catch (error) {
         console.error('Error checking favorite status:', error);
       } finally {
@@ -86,34 +97,53 @@ const FavoriteButton = ({
 
     try {
       setIsProcessing(true);
+      console.log('Toggling favorite for course:', courseId, 'current status:', isFavorite);
 
-      // First try file-based wishlist API
+      let success = false;
+      const userId = user.userId || user.id;
+
+      // Try file-based wishlist API first
       try {
         if (isFavorite) {
-          await removeFromWishlist(user.userId, courseId);
-          toast.success(`${courseName} removed from favorites`);
+          await removeFromWishlist(userId, courseId);
+          console.log('Successfully removed from wishlist');
+          success = true;
         } else {
-          await addToWishlist(user.userId, courseId);
-          toast.success(`${courseName} added to favorites`);
+          await addToWishlist(userId, courseId);
+          console.log('Successfully added to wishlist');
+          success = true;
         }
       } catch (fileWishlistError) {
-        console.warn('Error using file-based wishlist, falling back to database:', fileWishlistError);
+        console.warn('Error using file-based wishlist:', fileWishlistError);
+      }
 
-        // Fall back to database API
-        if (isFavorite) {
-          await removeFromFavorites(courseId);
-          toast.success(`${courseName} removed from favorites`);
-        } else {
-          await addToFavorites(courseId);
-          toast.success(`${courseName} added to favorites`);
+      // If file-based API failed, try database API
+      if (!success) {
+        try {
+          if (isFavorite) {
+            await removeFromFavorites(courseId);
+            console.log('Successfully removed from database favorites');
+            success = true;
+          } else {
+            await addToFavorites(courseId);
+            console.log('Successfully added to database favorites');
+            success = true;
+          }
+        } catch (dbError) {
+          console.warn('Error using database favorites:', dbError);
         }
       }
 
-      setIsFavorite(!isFavorite);
+      if (success) {
+        toast.success(isFavorite ? `${courseName} removed from favorites` : `${courseName} added to favorites`);
+        setIsFavorite(!isFavorite);
 
-      // Call the callback if provided
-      if (onFavoriteChange) {
-        onFavoriteChange(!isFavorite);
+        // Call the callback if provided
+        if (onFavoriteChange) {
+          onFavoriteChange(!isFavorite);
+        }
+      } else {
+        toast.error('Failed to update favorites. Please try again.');
       }
     } catch (error) {
       console.error('Error toggling favorite:', error);

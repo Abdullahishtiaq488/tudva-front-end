@@ -122,8 +122,16 @@ const AddTopic = ({ show, onHide, onDataSubmit }) => {
     onDataSubmit({
       topicName: data.topicName,
       description: data.description,
-      videoFile: videoData.file, // Directly pass the File object
-      videoUrl: videoData.url, // Pass the URL for preview
+      // Store the actual cloud storage URL, not the local blob URL
+      videoUrl: videoData.url, // This should be the cloud storage URL from the backend
+      // We don't need to pass the file object anymore since we have the cloud URL
+      // But keep it for backward compatibility
+      videoFile: videoData.file,
+    });
+
+    console.log('Video data being submitted:', {
+      url: videoData.url,
+      previewUrl: videoData.previewUrl
     });
 
     // Reset form and state

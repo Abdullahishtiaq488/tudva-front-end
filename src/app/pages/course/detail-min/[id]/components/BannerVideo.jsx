@@ -42,6 +42,7 @@ const BannerVideo = ({ course, selectedVideo }) => {
   // Update video source when current video changes
   useEffect(() => {
     if (currentVideo && currentVideo.videoUrl) {
+      console.log('Setting video source from currentVideo:', currentVideo.videoUrl);
       setVideoSource({
         type: "video",
         sources: [
@@ -53,6 +54,23 @@ const BannerVideo = ({ course, selectedVideo }) => {
       });
     }
   }, [currentVideo]);
+
+  // Update video source when selectedVideo changes
+  useEffect(() => {
+    if (selectedVideo && selectedVideo.videoUrl) {
+      console.log('Setting video source from selectedVideo:', selectedVideo.videoUrl);
+      setVideoSource({
+        type: "video",
+        sources: [
+          {
+            src: selectedVideo.videoUrl,
+            type: "video/mp4"
+          }
+        ]
+      });
+      setCurrentVideo(selectedVideo);
+    }
+  }, [selectedVideo]);
 
   // Handle video selection from playlist
   const handleVideoSelect = (video) => {
@@ -91,6 +109,7 @@ const BannerVideo = ({ course, selectedVideo }) => {
                         embedUrl = `https://www.youtube.com/embed/${videoId}`;
                       }
                       // If already in embed format, use as is
+                      console.log('YouTube embed URL:', embedUrl);
 
                       return (
                         <iframe
@@ -126,12 +145,24 @@ const BannerVideo = ({ course, selectedVideo }) => {
                         </video>
                       );
                     }
+                    // Handle blob URLs (temporary URLs created by URL.createObjectURL)
+                    else if (videoUrl && videoUrl.startsWith('blob:')) {
+                      console.log('Detected blob URL, this is a temporary URL that will not persist:', videoUrl);
+                      return (
+                        <div className="text-center p-5 bg-light rounded-3">
+                          <h4>Video URL is a temporary blob URL</h4>
+                          <p>This video URL is temporary and will not work after page refresh. Please contact the course creator to fix this issue.</p>
+                          <p className="text-muted small">Technical details: The video was saved with a temporary blob URL instead of being uploaded to cloud storage.</p>
+                        </div>
+                      );
+                    }
                     // Handle other video URLs
                     else if (videoUrl) {
-                      console.log('Rendering standard video player');
+                      console.log('Rendering standard video player for URL:', videoUrl);
                       return (
                         <video
                           controls
+                          autoPlay
                           className="w-100 rounded-lg shadow-lg"
                           style={{ maxHeight: '500px', objectFit: 'contain' }}
                           onError={(e) => {
@@ -144,6 +175,8 @@ const BannerVideo = ({ course, selectedVideo }) => {
                           }}
                         >
                           <source src={videoUrl} type="video/mp4" />
+                          <source src={videoUrl} type="video/webm" />
+                          <source src={videoUrl} type="video/ogg" />
                           Your browser does not support the video tag.
                         </video>
                       );

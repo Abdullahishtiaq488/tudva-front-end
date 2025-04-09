@@ -1,6 +1,30 @@
 import axios from 'axios';
-import { getBackendUrl } from './apiConfig';
-import { getAuthHeader } from './auth';
+
+// Helper function to get the backend URL
+const getBackendUrl = () => {
+  return process.env.NEXT_PUBLIC_BACKEND_BASE_URL || 'http://localhost:3001';
+};
+
+// Fallback implementation of getAuthHeader in case auth.js is missing
+const getAuthHeader = () => {
+  // Check if we're in a browser environment
+  if (typeof window === 'undefined') {
+    return {};
+  }
+
+  try {
+    const token = localStorage.getItem('token');
+    if (token) {
+      return {
+        Authorization: `Bearer ${token}`
+      };
+    }
+  } catch (error) {
+    console.error('Error getting auth header:', error);
+  }
+
+  return {};
+};
 
 /**
  * Get reviews for a course using the file-based API
@@ -19,7 +43,7 @@ export const getReviewsForCourse = async (courseId, page = 1, limit = 10) => {
         }
       }
     );
-    
+
     return response.data;
   } catch (error) {
     console.error('Error getting reviews:', error);
@@ -38,7 +62,7 @@ export const getReviewsForCourse = async (courseId, page = 1, limit = 10) => {
 export const createReview = async (userId, courseId, content, rating) => {
   try {
     const authHeader = getAuthHeader();
-    
+
     const response = await axios.post(
       `${getBackendUrl()}/api/file-reviews`,
       {
@@ -54,7 +78,7 @@ export const createReview = async (userId, courseId, content, rating) => {
         }
       }
     );
-    
+
     return response.data;
   } catch (error) {
     console.error('Error creating review:', error);
@@ -73,7 +97,7 @@ export const createReview = async (userId, courseId, content, rating) => {
 export const updateReview = async (reviewId, userId, isAdmin, data) => {
   try {
     const authHeader = getAuthHeader();
-    
+
     const response = await axios.put(
       `${getBackendUrl()}/api/file-reviews/${reviewId}`,
       {
@@ -88,7 +112,7 @@ export const updateReview = async (reviewId, userId, isAdmin, data) => {
         }
       }
     );
-    
+
     return response.data;
   } catch (error) {
     console.error('Error updating review:', error);
@@ -106,7 +130,7 @@ export const updateReview = async (reviewId, userId, isAdmin, data) => {
 export const deleteReview = async (reviewId, userId, isAdmin) => {
   try {
     const authHeader = getAuthHeader();
-    
+
     const response = await axios.delete(
       `${getBackendUrl()}/api/file-reviews/${reviewId}`,
       {
@@ -120,7 +144,7 @@ export const deleteReview = async (reviewId, userId, isAdmin) => {
         }
       }
     );
-    
+
     return response.data;
   } catch (error) {
     console.error('Error deleting review:', error);
@@ -137,7 +161,7 @@ export const deleteReview = async (reviewId, userId, isAdmin) => {
 export const markReviewAsHelpful = async (reviewId, userId) => {
   try {
     const authHeader = getAuthHeader();
-    
+
     const response = await axios.post(
       `${getBackendUrl()}/api/file-reviews/${reviewId}/helpful`,
       {
@@ -150,7 +174,7 @@ export const markReviewAsHelpful = async (reviewId, userId) => {
         }
       }
     );
-    
+
     return response.data;
   } catch (error) {
     console.error('Error marking review as helpful:', error);
@@ -167,7 +191,7 @@ export const markReviewAsHelpful = async (reviewId, userId) => {
 export const hasMarkedReviewAsHelpful = async (reviewId, userId) => {
   try {
     const authHeader = getAuthHeader();
-    
+
     const response = await axios.get(
       `${getBackendUrl()}/api/file-reviews/${reviewId}/helpful?userId=${userId}`,
       {
@@ -177,7 +201,7 @@ export const hasMarkedReviewAsHelpful = async (reviewId, userId) => {
         }
       }
     );
-    
+
     return response.data;
   } catch (error) {
     console.error('Error checking if review is marked as helpful:', error);

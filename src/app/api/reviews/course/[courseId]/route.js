@@ -9,7 +9,7 @@ const getBackendUrl = () => {
 // GET /api/reviews/course/[courseId] - Get reviews for a course
 export async function GET(request, { params }) {
   const courseId = params.courseId;
-  
+
   try {
     // Get query parameters
     const { searchParams } = new URL(request.url);
@@ -21,9 +21,28 @@ export async function GET(request, { params }) {
     queryParams.append('page', page);
     queryParams.append('limit', limit);
 
-    console.log(`Fetching reviews for course ${courseId} from ${getBackendUrl()}/api/reviews/course/${courseId}?${queryParams.toString()}`);
+    console.log(`Fetching reviews for course ${courseId}`);
 
-    // Make request to backend
+    // First try the file-based API
+    try {
+      console.log(`Trying file-based API: ${getBackendUrl()}/api/file-reviews/course/${courseId}?${queryParams.toString()}`);
+      const fileResponse = await axios.get(
+        `${getBackendUrl()}/api/file-reviews/course/${courseId}?${queryParams.toString()}`,
+        {
+          timeout: 5000 // 5 second timeout
+        }
+      );
+
+      if (fileResponse.data && fileResponse.data.success) {
+        console.log('Successfully fetched reviews from file-based API:', fileResponse.data);
+        return NextResponse.json(fileResponse.data, { status: 200 });
+      }
+    } catch (fileError) {
+      console.warn('File-based API failed, trying regular API:', fileError.message);
+    }
+
+    // If file-based API fails, try the regular API
+    console.log(`Trying regular API: ${getBackendUrl()}/api/reviews/course/${courseId}?${queryParams.toString()}`);
     const backendResponse = await axios.get(
       `${getBackendUrl()}/api/reviews/course/${courseId}?${queryParams.toString()}`,
       {
@@ -31,7 +50,7 @@ export async function GET(request, { params }) {
       }
     );
 
-    console.log('Backend response:', backendResponse.data);
+    console.log('Regular API response:', backendResponse.data);
 
     return NextResponse.json(backendResponse.data, { status: 200 });
   } catch (error) {

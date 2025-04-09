@@ -5,6 +5,7 @@ import CourseTab from "./CourseTab";
 import avatar5 from '@/assets/images/avatar/05.jpg';
 import AllPlayList from "./AllPlayList";
 import { useState } from "react";
+import DebugVideoUrl from "./DebugVideoUrl";
 
 const CourseDetails = ({ course, onVideoSelect }) => {
   const [selectedVideo, setSelectedVideo] = useState(null);
@@ -89,6 +90,9 @@ const CourseDetails = ({ course, onVideoSelect }) => {
               ))}
             </ul>
           </div>
+
+          {/* Debug component to fix video URLs */}
+          <DebugVideoUrl courseId={course?.course?.id} />
         </Col>
       </Row>
     </Container>

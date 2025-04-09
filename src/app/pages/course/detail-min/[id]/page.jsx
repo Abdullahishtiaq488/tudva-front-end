@@ -89,8 +89,8 @@ const DetailMinimal = () => {
               bio: 'Experienced instructor with expertise in this subject.',
               id: course.instructor_id || 'local_instructor'
             },
-            rating: 4.5,
-            enrolled: Math.floor(Math.random() * 1000) + 100, // Random number for enrolled students
+            rating: course.averageRating || 4.5,
+            enrolled: course.enrollmentCount || 0, // Use real enrollment count
             price: course.price || 0,
             duration: '10 weeks',
             language: course.language || 'English',
@@ -100,28 +100,7 @@ const DetailMinimal = () => {
           lectures: course.lectures || [],
           faqs: course.faqs || [],
           tags: course.tags || [],
-          reviews: course.reviews || [
-            {
-              id: 1,
-              user: {
-                name: 'John Doe',
-                avatar: '/assets/images/avatar/placeholder.svg'
-              },
-              rating: 5,
-              date: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-              comment: 'Great course! I learned a lot from this course.'
-            },
-            {
-              id: 2,
-              user: {
-                name: 'Jane Smith',
-                avatar: '/assets/images/avatar/placeholder.svg'
-              },
-              rating: 4,
-              date: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
-              comment: 'Very informative and well-structured course.'
-            }
-          ],
+          reviews: course.reviews || [],
           // Use actual rating from course if available
           averageRating: course.averageRating || 5.0,
           reviewCount: course.reviewCount || 0
@@ -141,7 +120,7 @@ const DetailMinimal = () => {
               title: lecture.topicName || lecture.title || 'Untitled Lecture',
               description: lecture.description || '',
               duration: '10:00',
-              videoUrl: lecture.videoUrl || lecture.videoFile || 'https://www.youtube.com/embed/tXHviS-4ygo',
+              videoUrl: lecture.videoUrl || lecture.videoFile || lecture.video_url || 'https://www.youtube.com/embed/tXHviS-4ygo',
               watched: false
             });
           });
@@ -179,9 +158,10 @@ const DetailMinimal = () => {
   }, [courseId]);
 
   const handleVideoSelect = (video) => {
-    setCurrentVideo(video);
-
-    console.log(video, "in the page")
+    console.log('Video selected in page:', video);
+    if (video && video.videoUrl) {
+      setCurrentVideo(video);
+    }
   };
   console.log(currentVideo, "in the ccccccccccccc")
 

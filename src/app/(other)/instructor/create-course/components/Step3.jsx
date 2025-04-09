@@ -205,8 +205,10 @@ const Step3 = ({ goToNextStep, goBackToPreviousStep }) => {
                 topicName: lecture.topicName,
                 description: lecture.description,
                 sortOrder: lectureIndex,
-                videoUrl: lecture.videoUrl || '',
-                videoFile: lecture.videoFile instanceof File ? URL.createObjectURL(lecture.videoFile) : (lecture.videoFile || ''),
+                // Use the actual cloud storage URL if available, not a blob URL
+                videoUrl: lecture.url || lecture.videoUrl || '',
+                // Don't create blob URLs here - they're temporary and won't persist
+                videoFile: lecture.videoFile || '',
               };
               processedLectures.push(lectureData);
             });

@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, Col, Nav, NavItem, NavLink, ProgressBar, Row, TabContainer, TabContent, TabPane } from "react-bootstrap";
+import { Button, Col, Nav, NavItem, NavLink, ProgressBar, Row, TabContainer, TabContent, TabPane, Card, CardBody } from "react-bootstrap";
 import Image from "next/image";
 import Link from "next/link";
 import { Fragment } from "react";
@@ -18,6 +18,7 @@ import clsx from "clsx";
 import avatar9 from '@/assets/images/avatar/09.jpg';
 import { commentData, faqsData } from "../data";
 import { getAllUserReviews } from "@/helpers/data";
+import ReviewList from "@/components/reviews/ReviewList";
 const Overview = ({ course }) => {
   const features = ["Digital marketing course introduction", "Customer Life cycle", "What is Search engine optimization(SEO)", "Facebook ADS", "Facebook Messenger Chatbot", "Search engine optimization tools", "Why SEO", "URL Structure", "Featured Snippet", "SEO tips and tricks", "Google tag manager"];
   const featureChunks = splitArray(features, 2);
@@ -36,114 +37,33 @@ const Overview = ({ course }) => {
   </>;
 };
 const UserReviews = ({ course }) => {
-  const reviewSchema = yup.object({
-    name: yup.string().required('please enter your name'),
-    email: yup.string().email('please enter valid email').required('please enter your email'),
-    review: yup.string().required('please enter your review')
-  });
-  const {
-    control,
-    handleSubmit
-  } = useForm({
-    resolver: yupResolver(reviewSchema)
-  });
+  // Get course ID from course data
+  const courseId = course?.course?.id;
 
-  // Use course reviews if available, otherwise use dummy data
-  const userReviews = course?.reviews || useFetchData(getAllUserReviews);
+  if (!courseId) {
+    console.warn('Course ID not available for reviews:', course);
+    return (
+      <div className="text-center py-4">
+        <p>Course information not available.</p>
+        <p className="text-muted small">Please try refreshing the page or contact support if the issue persists.</p>
+      </div>
+    );
+  }
 
-  // Use course average rating if available, otherwise default to 5.0
-  const averageRating = course?.averageRating || 5.0;
-  const reviewCount = course?.reviewCount || 0;
+  console.log('Rendering reviews for course ID:', courseId);
 
-  return <>
-    <Row className="mb-4">
-      <h5 className="mb-4">Our Student Reviews</h5>
-      <Col md={4} className="mb-3 mb-md-0">
-        <div className="text-center">
-          <h2 className="mb-0">{averageRating.toFixed(1)}</h2>
-          <ul className="list-inline mb-0">
-            {Array(Math.floor(averageRating)).fill(0).map((_star, idx) => <li key={idx} className="list-inline-item me-1 small"><FaStar size={16} className="text-warning" /></li>)}
-            {!Number.isInteger(averageRating) && <li className="list-inline-item me-1 small"> <FaStarHalfAlt size={16} className="text-warning" /> </li>}
-            {averageRating < 5 && Array(5 - Math.ceil(averageRating)).fill(0).map((_star, idx) => <li key={idx} className="list-inline-item me-1 small"><FaRegStar size={16} className="text-warning" /></li>)}
-          </ul>
-          <p className="mb-0">{reviewCount > 0 ? `(Based on ${reviewCount} reviews)` : '(No reviews yet)'}</p>
-        </div>
-      </Col>
-      <Col md={8}>
-        <Row className="align-items-center text-center">
-          {[100, 80, 60, 40, 20].map((progress, idx) => <Fragment key={idx}>
-            <Col xs={6} sm={8}>
-              <ProgressBar variant="warning" className="progress-sm bg-opacity-15" now={progress} />
-            </Col>
-            <Col xs={6} sm={4}>
-              <ul className="list-inline mb-0">
-                {Array(Math.floor(5 - idx)).fill(0).map((_star, idx) => <li key={idx} className="list-inline-item me-1 small"><FaStar size={14} className="text-warning" /></li>)}
-                {!Number.isInteger(5 - idx) && <li className="list-inline-item me-1 small"> <FaStarHalfAlt size={14} className="text-warning" /> </li>}
-                {5 - idx < 5 && Array(5 - Math.ceil(5 - idx)).fill(0).map((_star, idx) => <li key={idx} className="list-inline-item me-1 small"><FaRegStar size={14} className="text-warning" /></li>)}
-              </ul>
-            </Col>
-          </Fragment>)}
-        </Row>
-      </Col>
-    </Row>
-    <Row>
-      {userReviews && userReviews.length > 0 ? (
-        userReviews.map((review, idx) => (
-          <Fragment key={idx}>
-            <div className="d-md-flex my-4" key={idx}>
-              <div className="avatar avatar-xl me-4 flex-shrink-0">
-                <Image
-                  className="avatar-img rounded-circle"
-                  src={review.user?.avatar || review.avatar || '/assets/images/avatar/placeholder.svg'}
-                  alt="avatar"
-                  width={80}
-                  height={80}
-                />
-              </div>
-              <div>
-                <div className="d-sm-flex mt-1 mt-md-0 align-items-center">
-                  <h5 className="me-3 mb-0">{review.user?.name || review.name || 'Anonymous'}</h5>
-                  {review.rating && <ul className="list-inline mb-0">
-                    {Array(Math.floor(review.rating)).fill(0).map((_star, idx) => <li key={idx} className="list-inline-item me-1 small"><FaStar size={16} className="text-warning" /></li>)}
-                    {!Number.isInteger(review.rating) && <li className="list-inline-item me-1 small"> <FaStarHalfAlt size={16} className="text-warning" /> </li>}
-                    {review.rating < 5 && Array(5 - Math.ceil(review.rating)).fill(0).map((_star, idx) => <li key={idx} className="list-inline-item me-1 small"><FaRegStar size={16} className="text-warning" /></li>)}
-                  </ul>}
-                </div>
-                <p className="small mb-2">{review.time ? timeSince(review.time) : new Date(review.date || review.createdAt || Date.now()).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
-                <p className="mb-2">{review.description || review.comment || review.content || 'No comment provided'}</p>
-                <span role="button" className="text-body mb-0"><FaReply className="me-2" />Reply</span>
-              </div>
-            </div>
-            <hr />
-          </Fragment>
-        ))
-      ) : (
-        <div className="text-center py-4">
-          <p>No reviews yet. Be the first to review this course!</p>
-        </div>
-      )}
-    </Row>
-    <div className="mt-2">
-      <h5 className="mb-4">Leave a Review</h5>
-      <form className="row g-3" onSubmit={handleSubmit(() => { })}>
-        <TextFormInput name="name" control={control} placeholder="Name" containerClassName="col-md-6" />
-        <TextFormInput name="email" type="email" control={control} placeholder="Email" containerClassName="col-md-6" />
-        <Col xs={12}>
-          <ChoicesFormInput id="inputState2" className="form-select  js-choice">
-            <option>★★★★★ (5/5)</option>
-            <option>★★★★☆ (4/5)</option>
-            <option>★★★☆☆ (3/5)</option>
-            <option>★★☆☆☆ (2/5)</option>
-            <option>★☆☆☆☆ (1/5)</option>
-          </ChoicesFormInput>
+  return (
+    <>
+      <Row className="mb-4">
+        <h5 className="mb-4">Our Student Reviews</h5>
+        <Col md={12}>
+          <div className="mb-4">
+            <ReviewList courseId={courseId} />
+          </div>
         </Col>
-        <TextAreaFormInput name="review" placeholder="Your review" rows={3} control={control} containerClassName="col-12" />
-        <Col xs={12}>
-          <Button variant="primary" type="submit" className="mb-0">Post Review</Button>
-        </Col>
-      </form>
-    </div>
-  </>;
+      </Row>
+    </>
+  );
 };
 const Faqs = ({ course }) => {
   return <>

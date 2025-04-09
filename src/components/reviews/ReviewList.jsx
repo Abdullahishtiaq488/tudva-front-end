@@ -22,8 +22,20 @@ const ReviewList = ({ courseId }) => {
     submitReview,
     updateUserReview,
     deleteUserReview,
-    changePage
+    changePage,
+    fetchReviews
   } = useReviews(courseId);
+
+  // Log the courseId for debugging and fetch reviews when component mounts
+  useEffect(() => {
+    console.log('ReviewList received courseId:', courseId);
+    if (!courseId) {
+      console.warn('ReviewList: No courseId provided');
+    } else {
+      // Fetch reviews when courseId is available
+      fetchReviews(1, 10);
+    }
+  }, [courseId, fetchReviews]);
 
   // Calculate rating distribution
   const ratingDistribution = {
@@ -34,16 +46,21 @@ const ReviewList = ({ courseId }) => {
     1: 0
   };
 
-  reviews.forEach(review => {
-    const rating = Math.floor(review.rating);
-    if (rating >= 1 && rating <= 5) {
-      ratingDistribution[rating]++;
-    }
-  });
+  // Safely calculate rating distribution
+  if (reviews && Array.isArray(reviews)) {
+    reviews.forEach(review => {
+      if (review && typeof review.rating !== 'undefined') {
+        const rating = Math.floor(review.rating);
+        if (rating >= 1 && rating <= 5) {
+          ratingDistribution[rating]++;
+        }
+      }
+    });
+  }
 
   // Check if the current user has already reviewed this course
   useEffect(() => {
-    if (user && reviews.length > 0) {
+    if (user && reviews && Array.isArray(reviews) && reviews.length > 0) {
       const foundReview = reviews.find(review => review.user_id === user.id);
       if (foundReview) {
         setUserHasReviewed(true);
@@ -52,11 +69,28 @@ const ReviewList = ({ courseId }) => {
         setUserHasReviewed(false);
         setUserReview(null);
       }
+    } else {
+      setUserHasReviewed(false);
+      setUserReview(null);
     }
   }, [user, reviews]);
 
   const handleSubmitReview = async (reviewData) => {
-    return await submitReview(reviewData);
+    console.log('Submitting review:', reviewData);
+    try {
+      const result = await submitReview(reviewData);
+      console.log('Review submission result:', result);
+
+      if (result.success) {
+        // Refresh the reviews list
+        await fetchReviews(pagination.page, pagination.limit);
+      }
+
+      return result;
+    } catch (error) {
+      console.error('Error in handleSubmitReview:', error);
+      return { success: false, error: error.message || 'Failed to submit review' };
+    }
   };
 
   const handleUpdateReview = async (reviewId, reviewData) => {
@@ -149,16 +183,17 @@ const ReviewList = ({ courseId }) => {
 
       {/* Review Statistics */}
       <ReviewStats
-        averageRating={reviews.length > 0 ?
-          reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length :
-          0
+        averageRating={
+          reviews && Array.isArray(reviews) && reviews.length > 0 ?
+            reviews.reduce((sum, review) => sum + (review.rating || 0), 0) / reviews.length :
+            0
         }
-        reviewCount={pagination.total || reviews.length}
+        reviewCount={pagination?.total || (reviews && Array.isArray(reviews) ? reviews.length : 0)}
         ratingDistribution={ratingDistribution}
       />
 
-      {/* Write Review Button */}
-      {user && !userHasReviewed && !showReviewForm && (
+      {/* Write Review Button - Always visible */}
+      {!showReviewForm && (
         <Button
           variant="primary"
           className="mb-4"
@@ -168,18 +203,32 @@ const ReviewList = ({ courseId }) => {
         </Button>
       )}
 
-      {/* Review Form */}
-      {user && showReviewForm && !userHasReviewed && (
-        <ReviewForm
-          courseId={courseId}
-          onReviewSubmitted={async (data) => {
-            const result = await handleSubmitReview(data);
-            if (result.success) {
-              setShowReviewForm(false);
-            }
-            return result;
-          }}
-        />
+      {/* Review Form - Always available */}
+      {showReviewForm && (
+        <div className="mb-4 p-4 border rounded bg-light">
+          <h5 className="mb-3">Write Your Review</h5>
+          <ReviewForm
+            courseId={courseId}
+            onReviewSubmitted={async (data) => {
+              const result = await handleSubmitReview(data);
+              if (result.success) {
+                setShowReviewForm(false);
+                // Refresh reviews after submission
+                await fetchReviews(1, 10);
+              }
+              return result;
+            }}
+          />
+          <div className="mt-3">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setShowReviewForm(false)}
+            >
+              Cancel
+            </Button>
+          </div>
+        </div>
       )}
 
       {/* User's Review */}

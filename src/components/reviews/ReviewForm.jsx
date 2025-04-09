@@ -14,32 +14,41 @@ const ReviewForm = ({ courseId, onReviewSubmitted, existingReview = null }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     // Validate input
     if (rating === 0) {
       setError('Please select a rating');
       return;
     }
-    
+
     if (content.trim().length < 10) {
       setError('Review must be at least 10 characters long');
       return;
     }
-    
+
     setError('');
     setIsSubmitting(true);
-    
+
     try {
+      // Check if user is logged in by checking localStorage
+      const userId = localStorage.getItem('userId');
+      if (!userId) {
+        // If not logged in, show a message but don't prevent submission
+        console.warn('User not logged in, but continuing with review submission');
+      }
+
       // Call the onReviewSubmitted callback with the review data
       const result = await onReviewSubmitted({
         rating,
         content,
-        reviewId: existingReview?.id
+        reviewId: existingReview?.id,
+        // Use a default user ID if none is found
+        userId: userId || 'anonymous_user'
       });
-      
+
       if (result.success) {
         toast.success(existingReview ? 'Review updated successfully' : 'Review submitted successfully');
-        
+
         // Reset form if it's a new review
         if (!existingReview) {
           setRating(0);
@@ -60,13 +69,13 @@ const ReviewForm = ({ courseId, onReviewSubmitted, existingReview = null }) => {
   return (
     <div className="review-form-container mb-4 p-4 border rounded bg-light">
       <h5 className="mb-3">{existingReview ? 'Edit Your Review' : 'Write a Review'}</h5>
-      
+
       {error && (
         <div className="alert alert-danger" role="alert">
           {error}
         </div>
       )}
-      
+
       <Form onSubmit={handleSubmit}>
         <Form.Group className="mb-3">
           <Form.Label>Rating</Form.Label>
@@ -94,7 +103,7 @@ const ReviewForm = ({ courseId, onReviewSubmitted, existingReview = null }) => {
             </span>
           </div>
         </Form.Group>
-        
+
         <Form.Group className="mb-3">
           <Form.Label>Your Review</Form.Label>
           <Form.Control
@@ -111,10 +120,10 @@ const ReviewForm = ({ courseId, onReviewSubmitted, existingReview = null }) => {
             {content.length}/1000 characters
           </Form.Text>
         </Form.Group>
-        
-        <Button 
-          variant="primary" 
-          type="submit" 
+
+        <Button
+          variant="primary"
+          type="submit"
           disabled={isSubmitting}
           className="mt-2"
         >
