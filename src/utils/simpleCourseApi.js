@@ -9,7 +9,7 @@ const getBackendUrl = () => {
 export const createSimpleCourse = async (courseData) => {
   try {
     console.log('Creating course with simplified API:', courseData);
-    
+
     // Create a simplified course object
     const simplifiedCourse = {
       title: courseData.title,
@@ -22,15 +22,15 @@ export const createSimpleCourse = async (courseData) => {
       modulesCount: courseData.modulesCount || courseData.modules_count || 4,
       instructor_id: courseData.instructor_id
     };
-    
+
     // Make the API call
     const response = await axios.post(
       `${getBackendUrl()}/api/simple-courses/create`,
       simplifiedCourse
     );
-    
+
     console.log('Simple course creation response:', response.data);
-    
+
     return response.data;
   } catch (error) {
     console.error('Error creating course with simplified API:', error);

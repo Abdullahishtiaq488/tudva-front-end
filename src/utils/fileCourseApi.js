@@ -23,7 +23,7 @@ export const createFileCourse = async (courseData) => {
       instructor_id: courseData.instructor_id,
       color: courseData.color,
       icon: courseData.icon,
-      promoVideoUrl: courseData.promoVideoUrl,
+      promoVideoUrl: courseData.promoVideoUrl || courseData.promo_video_url,
       lectures: Array.isArray(courseData.lectures) ? courseData.lectures.map(lecture => ({
         id: lecture.id,
         moduleName: lecture.moduleName,
@@ -39,7 +39,9 @@ export const createFileCourse = async (courseData) => {
       tags: Array.isArray(courseData.tags) ? courseData.tags.map(tag => ({
         tagName: tag.tagName || tag.tag_name
       })) : [],
-      scheduling: courseData.scheduling || null
+      scheduling: courseData.scheduling || null,
+      // Include instructor information if available
+      instructor: courseData.instructor
     };
 
     // Make the API call
@@ -82,10 +84,51 @@ export const getFileCourseById = async (id) => {
 // Update a course using the file-based API
 export const updateFileCourse = async (id, courseData) => {
   try {
+    console.log('Updating course with file-based API:', courseData);
+
+    // Create a simplified course object with all necessary data
+    const simplifiedCourse = {
+      title: courseData.title,
+      shortDesription: courseData.shortDesription || courseData.short_description,
+      description: courseData.description || courseData.shortDesription || courseData.short_description,
+      category: courseData.category,
+      level: courseData.level,
+      language: courseData.language,
+      format: courseData.format || courseData.courseType || 'recorded',
+      modulesCount: courseData.modulesCount || courseData.modules_count || 4,
+      instructor_id: courseData.instructor_id,
+      color: courseData.color,
+      icon: courseData.icon,
+      promoVideoUrl: courseData.promoVideoUrl || courseData.promo_video_url,
+      lectures: Array.isArray(courseData.lectures) ? courseData.lectures.map(lecture => ({
+        id: lecture.id,
+        moduleName: lecture.moduleName,
+        topicName: lecture.topicName,
+        description: lecture.description,
+        videoUrl: lecture.videoUrl,
+        sortOrder: lecture.sortOrder
+      })) : [],
+      faqs: Array.isArray(courseData.faqs) ? courseData.faqs.map(faq => ({
+        id: faq.id, // Include ID for existing FAQs
+        question: faq.question,
+        answer: faq.answer
+      })) : [],
+      tags: Array.isArray(courseData.tags) ? courseData.tags.map(tag => ({
+        id: tag.id, // Include ID for existing tags
+        tagName: tag.tagName || tag.tag_name
+      })) : [],
+      scheduling: courseData.scheduling || null,
+      // Include instructor information if available
+      instructor: courseData.instructor
+    };
+
     const response = await axios.put(
       `${getBackendUrl()}/api/file-courses/${id}`,
-      courseData
+      simplifiedCourse
     );
+
+    console.log('File-based course update response:', response.data);
+
     return response.data;
   } catch (error) {
     console.error('Error updating course with file-based API:', error);

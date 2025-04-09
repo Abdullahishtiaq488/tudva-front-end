@@ -35,7 +35,7 @@ const Overview = ({ course }) => {
 
   </>;
 };
-const UserReviews = () => {
+const UserReviews = ({ course }) => {
   const reviewSchema = yup.object({
     name: yup.string().required('please enter your name'),
     email: yup.string().email('please enter valid email').required('please enter your email'),
@@ -47,19 +47,26 @@ const UserReviews = () => {
   } = useForm({
     resolver: yupResolver(reviewSchema)
   });
-  const userReviews = useFetchData(getAllUserReviews);
+
+  // Use course reviews if available, otherwise use dummy data
+  const userReviews = course?.reviews || useFetchData(getAllUserReviews);
+
+  // Use course average rating if available, otherwise default to 5.0
+  const averageRating = course?.averageRating || 5.0;
+  const reviewCount = course?.reviewCount || 0;
+
   return <>
     <Row className="mb-4">
       <h5 className="mb-4">Our Student Reviews</h5>
       <Col md={4} className="mb-3 mb-md-0">
         <div className="text-center">
-          <h2 className="mb-0">4.5</h2>
+          <h2 className="mb-0">{averageRating.toFixed(1)}</h2>
           <ul className="list-inline mb-0">
-            {Array(Math.floor(4.5)).fill(0).map((_star, idx) => <li key={idx} className="list-inline-item me-1 small"><FaStar size={16} className="text-warning" /></li>)}
-            {!Number.isInteger(4.5) && <li className="list-inline-item me-1 small"> <FaStarHalfAlt size={16} className="text-warning" /> </li>}
-            {4.5 < 5 && Array(5 - Math.ceil(4.5)).fill(0).map((_star, idx) => <li key={idx} className="list-inline-item me-1 small"><FaRegStar size={16} className="text-warning" /></li>)}
+            {Array(Math.floor(averageRating)).fill(0).map((_star, idx) => <li key={idx} className="list-inline-item me-1 small"><FaStar size={16} className="text-warning" /></li>)}
+            {!Number.isInteger(averageRating) && <li className="list-inline-item me-1 small"> <FaStarHalfAlt size={16} className="text-warning" /> </li>}
+            {averageRating < 5 && Array(5 - Math.ceil(averageRating)).fill(0).map((_star, idx) => <li key={idx} className="list-inline-item me-1 small"><FaRegStar size={16} className="text-warning" /></li>)}
           </ul>
-          <p className="mb-0">(Based on todays review)</p>
+          <p className="mb-0">{reviewCount > 0 ? `(Based on ${reviewCount} reviews)` : '(No reviews yet)'}</p>
         </div>
       </Col>
       <Col md={8}>
@@ -80,27 +87,41 @@ const UserReviews = () => {
       </Col>
     </Row>
     <Row>
-      {userReviews?.map((review, idx) => <Fragment key={idx}>
-        <div className="d-md-flex my-4" key={idx}>
-          <div className="avatar avatar-xl me-4 flex-shrink-0">
-            <Image className="avatar-img rounded-circle" src={review.avatar} alt="avatar" />
-          </div>
-          <div>
-            <div className="d-sm-flex mt-1 mt-md-0 align-items-center">
-              <h5 className="me-3 mb-0">{review.name}</h5>
-              {review.rating && <ul className="list-inline mb-0">
-                {Array(Math.floor(review.rating)).fill(0).map((_star, idx) => <li key={idx} className="list-inline-item me-1 small"><FaStar size={16} className="text-warning" /></li>)}
-                {!Number.isInteger(review.rating) && <li className="list-inline-item me-1 small"> <FaStarHalfAlt size={16} className="text-warning" /> </li>}
-                {review.rating < 5 && Array(5 - Math.ceil(review.rating)).fill(0).map((_star, idx) => <li key={idx} className="list-inline-item me-1 small"><FaRegStar size={16} className="text-warning" /></li>)}
-              </ul>}
+      {userReviews && userReviews.length > 0 ? (
+        userReviews.map((review, idx) => (
+          <Fragment key={idx}>
+            <div className="d-md-flex my-4" key={idx}>
+              <div className="avatar avatar-xl me-4 flex-shrink-0">
+                <Image
+                  className="avatar-img rounded-circle"
+                  src={review.user?.avatar || review.avatar || '/assets/images/avatar/placeholder.svg'}
+                  alt="avatar"
+                  width={80}
+                  height={80}
+                />
+              </div>
+              <div>
+                <div className="d-sm-flex mt-1 mt-md-0 align-items-center">
+                  <h5 className="me-3 mb-0">{review.user?.name || review.name || 'Anonymous'}</h5>
+                  {review.rating && <ul className="list-inline mb-0">
+                    {Array(Math.floor(review.rating)).fill(0).map((_star, idx) => <li key={idx} className="list-inline-item me-1 small"><FaStar size={16} className="text-warning" /></li>)}
+                    {!Number.isInteger(review.rating) && <li className="list-inline-item me-1 small"> <FaStarHalfAlt size={16} className="text-warning" /> </li>}
+                    {review.rating < 5 && Array(5 - Math.ceil(review.rating)).fill(0).map((_star, idx) => <li key={idx} className="list-inline-item me-1 small"><FaRegStar size={16} className="text-warning" /></li>)}
+                  </ul>}
+                </div>
+                <p className="small mb-2">{review.time ? timeSince(review.time) : new Date(review.date || review.createdAt || Date.now()).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                <p className="mb-2">{review.description || review.comment || review.content || 'No comment provided'}</p>
+                <span role="button" className="text-body mb-0"><FaReply className="me-2" />Reply</span>
+              </div>
             </div>
-            <p className="small mb-2">{timeSince(review.time)}</p>
-            <p className="mb-2">{review.description}</p>
-            <span role="button" className="text-body mb-0"><FaReply className="me-2" />Reply</span>
-          </div>
+            <hr />
+          </Fragment>
+        ))
+      ) : (
+        <div className="text-center py-4">
+          <p>No reviews yet. Be the first to review this course!</p>
         </div>
-        <hr />
-      </Fragment>)}
+      )}
     </Row>
     <div className="mt-2">
       <h5 className="mb-4">Leave a Review</h5>
@@ -225,7 +246,7 @@ const CourseTab = ({ course }) => {
         <Overview course={course} />
       </TabPane>
       <TabPane eventKey='reviews' className="fade" role="tabpanel">
-        <UserReviews />
+        <UserReviews course={course} />
       </TabPane>
       <TabPane eventKey='faqs' className="fade" role="tabpanel">
         <Faqs course={course} />

@@ -34,7 +34,7 @@ const CourseDetails = ({ course, onVideoSelect }) => {
             <Col xs={12}>
               <h1>{course?.title}</h1>
               <ul className="list-inline mb-0">
-                <li className="list-inline-item h6 me-3 mb-1 mb-sm-0"><FaStar className="text-warning me-2" />{course?.course?.rating || 4.5}/5.0</li>
+                <li className="list-inline-item h6 me-3 mb-1 mb-sm-0"><FaStar className="text-warning me-2" />{course?.averageRating?.toFixed(1) || course?.course?.rating || 5.0}/5.0</li>
                 <li className="list-inline-item h6 me-3 mb-1 mb-sm-0"><FaUserGraduate className="text-orange me-2" />{course?.course?.enrolled || 0} Enrolled</li>
                 <li className="list-inline-item h6 me-3 mb-1 mb-sm-0"><FaSignal className="text-success me-2" />{course?.course?.level || "Beginner"}</li>
               </ul>

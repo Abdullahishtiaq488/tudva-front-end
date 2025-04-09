@@ -1,8 +1,6 @@
 "use client"
 import Footer from "@/components/Footer";
-import BannerVideo from "./components/BannerVideo";
-import CourseDetails from "./components/CourseDetails";
-import TopNavigationBar from "./components/TopNavigationBar";
+import dynamic from 'next/dynamic';
 import { useParams } from "next/navigation";
 import { useState, useEffect } from "react";
 import { checkIsLoggedInUser } from "@/helpers/checkLoggedInUser";
@@ -10,6 +8,12 @@ import axiosInstance from "@/utils/axiosInstance";
 import { getAllFileCourses } from "@/utils/fileCourseApi";
 import { getAllDirectCourses } from "@/utils/directCourseApi";
 import { getAllSimpleCourses } from "@/utils/simpleCourseApi";
+import TopNavigationBar from "./components/TopNavigationBar";
+
+// Dynamically import components that use window/browser APIs with ssr: false
+const BannerVideo = dynamic(() => import("./components/BannerVideo"), { ssr: false });
+const CourseDetails = dynamic(() => import("./components/CourseDetails"), { ssr: false });
+const CourseDetailSkeleton = dynamic(() => import("./components/CourseDetailSkeleton"), { ssr: false });
 
 const DetailMinimal = () => {
   const params = useParams();
@@ -78,10 +82,10 @@ const DetailMinimal = () => {
             color: course.color || '#ffffff',
             icon: course.icon || 'FaBook',
             promo_video_url: course.promo_video_url || course.promoVideoUrl || '',
-            instructor: {
+            instructor: course.instructor || {
               name: 'Instructor Name',
               title: 'Course Instructor',
-              avatar: '/assets/images/avatar/01.jpg',
+              avatar: '/assets/images/avatar/placeholder.svg',
               bio: 'Experienced instructor with expertise in this subject.',
               id: course.instructor_id || 'local_instructor'
             },
@@ -96,12 +100,12 @@ const DetailMinimal = () => {
           lectures: course.lectures || [],
           faqs: course.faqs || [],
           tags: course.tags || [],
-          reviews: [
+          reviews: course.reviews || [
             {
               id: 1,
               user: {
                 name: 'John Doe',
-                avatar: '/assets/images/avatar/02.jpg'
+                avatar: '/assets/images/avatar/placeholder.svg'
               },
               rating: 5,
               date: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
@@ -111,13 +115,16 @@ const DetailMinimal = () => {
               id: 2,
               user: {
                 name: 'Jane Smith',
-                avatar: '/assets/images/avatar/03.jpg'
+                avatar: '/assets/images/avatar/placeholder.svg'
               },
               rating: 4,
               date: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
               comment: 'Very informative and well-structured course.'
             }
-          ]
+          ],
+          // Use actual rating from course if available
+          averageRating: course.averageRating || 5.0,
+          reviewCount: course.reviewCount || 0
         };
 
         // Create modules from lectures
@@ -179,7 +186,13 @@ const DetailMinimal = () => {
   console.log(currentVideo, "in the ccccccccccccc")
 
   if (isLoading) {
-    return <div>Loading course...</div>;
+    return (
+      <>
+        <TopNavigationBar />
+        <CourseDetailSkeleton />
+        <Footer className="bg-light" />
+      </>
+    );
   }
 
   return <>

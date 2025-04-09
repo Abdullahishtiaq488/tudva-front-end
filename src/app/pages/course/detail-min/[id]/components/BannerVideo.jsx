@@ -69,40 +69,96 @@ const BannerVideo = ({ course, selectedVideo }) => {
             <Col xs={12}>
               <div className="video-player rounded-3">
                 {videoSource ? (
-                  // Check if it's a YouTube URL
-                  (selectedVideo?.videoUrl?.includes('youtube.com') || currentVideo?.videoUrl?.includes('youtube.com')) ? (
-                    // Render YouTube iframe
-                    <iframe
-                      className="w-100 rounded-lg shadow-lg"
-                      style={{ height: '500px' }}
-                      src={selectedVideo?.videoUrl || currentVideo?.videoUrl || 'https://www.youtube.com/embed/tXHviS-4ygo'}
-                      title="YouTube video player"
-                      frameBorder="0"
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                      allowFullScreen
-                    ></iframe>
-                  ) : (
-                    // Render regular video player for direct video URLs
-                    <video
-                      controls
-                      className="w-100 rounded-lg shadow-lg"
-                      style={{ maxHeight: '500px', objectFit: 'contain' }}
-                      onError={(e) => {
-                        console.error("Video error:", e);
-                        // Try to display a fallback message or image
-                        e.target.outerHTML = `<div class="text-center p-5 bg-light rounded-3">
-                          <h4>Video could not be loaded</h4>
-                          <p>The video may be unavailable or in an unsupported format.</p>
-                        </div>`;
-                      }}
-                    >
-                      <source
-                        src={selectedVideo?.videoUrl || currentVideo?.videoUrl || ''}
-                        type="video/mp4"
-                      />
-                      Your browser does not support the video tag.
-                    </video>
-                  )
+                  // Determine video type and render appropriate player
+                  (() => {
+                    const videoUrl = selectedVideo?.videoUrl || currentVideo?.videoUrl || '';
+                    console.log('Processing video URL:', videoUrl);
+
+                    // Check if it's a YouTube URL
+                    if (videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be')) {
+                      console.log('Rendering YouTube player');
+                      // Convert any YouTube URL to embed format
+                      let embedUrl = videoUrl;
+
+                      // Handle youtu.be format
+                      if (videoUrl.includes('youtu.be')) {
+                        const videoId = videoUrl.split('/').pop().split('?')[0];
+                        embedUrl = `https://www.youtube.com/embed/${videoId}`;
+                      }
+                      // Handle regular youtube.com format
+                      else if (videoUrl.includes('watch?v=')) {
+                        const videoId = new URLSearchParams(videoUrl.split('?')[1]).get('v');
+                        embedUrl = `https://www.youtube.com/embed/${videoId}`;
+                      }
+                      // If already in embed format, use as is
+
+                      return (
+                        <iframe
+                          className="w-100 rounded-lg shadow-lg"
+                          style={{ height: '500px' }}
+                          src={embedUrl}
+                          title="YouTube video player"
+                          frameBorder="0"
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          allowFullScreen
+                        ></iframe>
+                      );
+                    }
+                    // Check if it's a Google Cloud Storage URL
+                    else if (videoUrl.includes('storage.googleapis.com')) {
+                      console.log('Rendering Google Cloud Storage video');
+                      return (
+                        <video
+                          controls
+                          className="w-100 rounded-lg shadow-lg"
+                          style={{ maxHeight: '500px', objectFit: 'contain' }}
+                          onError={(e) => {
+                            console.error("Video error:", e);
+                            // Try to display a fallback message or image
+                            e.target.outerHTML = `<div class="text-center p-5 bg-light rounded-3">
+                              <h4>Video could not be loaded</h4>
+                              <p>The video may be unavailable or in an unsupported format.</p>
+                            </div>`;
+                          }}
+                        >
+                          <source src={videoUrl} type="video/mp4" />
+                          Your browser does not support the video tag.
+                        </video>
+                      );
+                    }
+                    // Handle other video URLs
+                    else if (videoUrl) {
+                      console.log('Rendering standard video player');
+                      return (
+                        <video
+                          controls
+                          className="w-100 rounded-lg shadow-lg"
+                          style={{ maxHeight: '500px', objectFit: 'contain' }}
+                          onError={(e) => {
+                            console.error("Video error:", e);
+                            // Try to display a fallback message or image
+                            e.target.outerHTML = `<div class="text-center p-5 bg-light rounded-3">
+                              <h4>Video could not be loaded</h4>
+                              <p>The video may be unavailable or in an unsupported format.</p>
+                            </div>`;
+                          }}
+                        >
+                          <source src={videoUrl} type="video/mp4" />
+                          Your browser does not support the video tag.
+                        </video>
+                      );
+                    }
+                    // If no valid URL, show a message
+                    else {
+                      console.log('No valid video URL found');
+                      return (
+                        <div className="text-center p-5 bg-light rounded-3">
+                          <h4>Video URL is invalid</h4>
+                          <p>The video URL is empty or in an unsupported format.</p>
+                        </div>
+                      );
+                    }
+                  })()
                 ) : (
                   <div className="text-center p-5 bg-light rounded-3">
                     <h4>No video selected or available</h4>

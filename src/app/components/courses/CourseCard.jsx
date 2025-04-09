@@ -12,32 +12,48 @@ import * as FaIcons from "react-icons/fa";
 const DynamicIcon = ({ iconName }) => {
   console.log('Rendering icon:', iconName);
 
+  // Handle null or undefined iconName
+  if (!iconName) {
+    console.warn('No icon name provided, using default');
+    const DefaultIcon = FaIcons.FaBook;
+    return <DefaultIcon size={'sm'} className="w-25" />;
+  }
+
   // Check if the iconName is a full URL (from cloud storage)
-  if (iconName && (iconName.includes('storage.googleapis.com') || iconName.includes('supabase.co'))) {
+  if (iconName.includes('storage.googleapis.com') || iconName.includes('supabase.co')) {
+    console.log('Using cloud storage URL for icon:', iconName);
     return (
       <img
         src={iconName}
         alt="Course Icon"
         className="w-25"
         style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
+        onError={(e) => {
+          console.error('Failed to load icon from cloud storage URL:', iconName);
+          e.target.onerror = null;
+          // Use a Font Awesome icon as fallback
+          e.target.style.display = 'none';
+          e.target.parentNode.innerHTML = '<i class="fas fa-book fs-1 text-primary"></i>';
+        }}
       />
     );
   }
 
   // Check if the iconName is a custom icon (contains a file extension)
-  if (iconName && (iconName.includes('.png') || iconName.includes('.jpg') || iconName.includes('.svg'))) {
+  if (iconName.includes('.png') || iconName.includes('.jpg') || iconName.includes('.svg') || iconName.includes('.jpeg') || iconName.includes('.gif')) {
     // Fix the path by removing spaces and ensuring correct format
     // Try different path formats to ensure the icon is found
     const paths = [
       `/assets/all icons 96px/${iconName}`,
       `/assets/all%20icons%2096px/${iconName}`,
-      `/public/assets/all icons 96px/${iconName}`,
-      `/public/assets/all%20icons%2096px/${iconName}`,
       `/assets/icons/${iconName}`,
-      `/public/assets/icons/${iconName}`
+      `/assets/images/icons/${iconName}`,
+      `/assets/images/${iconName}`,
+      `/assets/${iconName}`,
+      `/${iconName}`
     ];
 
-    console.log('Trying icon paths:', paths);
+    console.log('Trying icon paths for file:', iconName);
 
     return (
       <img
@@ -46,12 +62,12 @@ const DynamicIcon = ({ iconName }) => {
         className="w-25"
         style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
         onError={(e) => {
-          console.error('Failed to load icon from primary path:', paths[0]);
+          console.error('Failed to load icon from path:', e.target.src);
           // Try the next path
           const currentPath = e.target.src;
           const currentIndex = paths.findIndex(path => currentPath.endsWith(path));
 
-          if (currentIndex < paths.length - 1) {
+          if (currentIndex >= 0 && currentIndex < paths.length - 1) {
             console.log('Trying next path:', paths[currentIndex + 1]);
             e.target.src = paths[currentIndex + 1];
           } else {
@@ -66,17 +82,23 @@ const DynamicIcon = ({ iconName }) => {
     );
   }
 
-  // Otherwise, use Font Awesome icons
-  const IconComponent = FaIcons[iconName]; // Dynamically get the icon
+  // Try to use Font Awesome icons
+  try {
+    // Check if iconName is a valid Font Awesome icon name
+    const IconComponent = FaIcons[iconName]; // Dynamically get the icon
 
-  if (!IconComponent) {
-    console.warn('Icon not found:', iconName);
-    // Use a default icon
-    const DefaultIcon = FaIcons.FaBook;
-    return <DefaultIcon size={'sm'} className="w-25" />;
+    if (IconComponent) {
+      console.log('Using Font Awesome icon:', iconName);
+      return <IconComponent size={'sm'} className="w-25" />;
+    }
+  } catch (error) {
+    console.error('Error rendering Font Awesome icon:', error);
   }
 
-  return <IconComponent size={'sm'} className="w-25" />;
+  // If all else fails, use a default icon
+  console.warn('Icon not found or invalid format:', iconName, 'Using default icon');
+  const DefaultIcon = FaIcons.FaBook;
+  return <DefaultIcon size={'sm'} className="w-25" />;
 };
 
 
@@ -99,9 +121,17 @@ const CourseCard = ({
     toggle
   } = useToggle(true);
   const router = useRouter();
+  // Log the course ID to help with debugging
+  console.log('Course card clicked with ID:', id);
+
   return <Card
-    onClick={() => { router.push(`pages/course/detail-min/${id}`) }}
-    className="rounded overflow-hidden shadow">
+    onClick={() => {
+      // Use the correct path format with leading slash
+      router.push(`/pages/course/detail-min/${id}`);
+    }}
+    className="rounded overflow-hidden shadow"
+    role="button"
+    style={{ cursor: 'pointer' }}>
     <Row className="g-0">
       <Col md={4}>
         {/* <Image src={image} className="" alt="card image" /> */}

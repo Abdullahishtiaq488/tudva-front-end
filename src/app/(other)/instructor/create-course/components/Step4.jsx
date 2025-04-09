@@ -10,7 +10,7 @@ import { checkIsLoggedInUser } from '@/helpers/checkLoggedInUser';
 import { addCourse } from '@/utils/courseSync';
 import { createSimpleCourse } from '@/utils/simpleCourseApi';
 import { createDirectCourse } from '@/utils/directCourseApi';
-import { createFileCourse } from '@/utils/fileCourseApi';
+import { createFileCourse, updateFileCourse } from '@/utils/fileCourseApi';
 
 const Step4 = ({ goBackToPreviousStep, onSubmit }) => {
   const { register, formState: { errors }, control, setValue, getValues, watch } = useFormContext();
@@ -302,6 +302,38 @@ const Step4 = ({ goBackToPreviousStep, onSubmit }) => {
     }
   };
 
+  // Function to update a course in localStorage
+  const updateCourseInLocalStorage = async (courseId, updatedCourse) => {
+    try {
+      // Get existing courses from localStorage
+      const coursesStr = localStorage.getItem('courses');
+      if (!coursesStr) {
+        console.error('No courses found in localStorage');
+        return false;
+      }
+
+      const courses = JSON.parse(coursesStr);
+      const courseIndex = courses.findIndex(c => c.id === courseId);
+
+      if (courseIndex === -1) {
+        console.error(`Course with ID ${courseId} not found in localStorage`);
+        return false;
+      }
+
+      // Update the course
+      courses[courseIndex] = updatedCourse;
+
+      // Save back to localStorage
+      localStorage.setItem('courses', JSON.stringify(courses));
+
+      console.log(`Course with ID ${courseId} updated in localStorage`);
+      return true;
+    } catch (error) {
+      console.error('Error updating course in localStorage:', error);
+      return false;
+    }
+  };
+
   const handleSubmit = async () => {
     try {
       // Show loading toast
@@ -373,9 +405,13 @@ const Step4 = ({ goBackToPreviousStep, onSubmit }) => {
         return;
       }
 
-      // Try the file-based course creation API first
+      // Check if we're editing an existing course or creating a new one
+      const isEditing = !!courseId;
+      console.log('Is editing existing course:', isEditing, 'Course ID:', courseId);
+
+      // Try the file-based course API first
       try {
-        console.log('Using file-based course creation API...');
+        console.log('Using file-based course API...');
 
         // Add instructor ID if available
         if (token) {
@@ -392,13 +428,35 @@ const Step4 = ({ goBackToPreviousStep, onSubmit }) => {
           }
         }
 
-        // Call the file-based API
-        const result = await createFileCourse(minimalCourse);
+        // Add the course ID if we're editing
+        if (isEditing) {
+          minimalCourse.id = courseId;
+        }
+
+        // Call the appropriate file-based API based on whether we're editing or creating
+        let result;
+        if (isEditing) {
+          console.log('Updating existing course with ID:', courseId);
+          result = await updateFileCourse(courseId, {
+            ...minimalCourse,
+            faqs: formData.faqs || [],
+            tags: formData.tags || [],
+            scheduling: schedulingData,
+            color: currentCourse.color,
+            icon: currentCourse.icon,
+            promoVideoUrl: currentCourse.promoVideoUrl,
+            lectures: currentCourse.lectures || []
+          });
+        } else {
+          console.log('Creating new course');
+          result = await createFileCourse(minimalCourse);
+        }
+
         console.log('File-based API response:', result);
 
         if (result.success) {
           // Success! Update localStorage and redirect
-          toast.success('Course created successfully!', { id: 'create-course' });
+          toast.success(isEditing ? 'Course updated successfully!' : 'Course created successfully!', { id: 'create-course' });
 
           // Create the updated course object
           const updatedCourse = {
@@ -411,8 +469,12 @@ const Step4 = ({ goBackToPreviousStep, onSubmit }) => {
             updatedAt: new Date().toISOString()
           };
 
-          // Save to localStorage
-          await addCourse(updatedCourse);
+          // Save to localStorage - if editing, update the existing course
+          if (isEditing) {
+            await updateCourseInLocalStorage(courseId, updatedCourse);
+          } else {
+            await addCourse(updatedCourse);
+          }
 
           // Also update current_course in localStorage
           localStorage.setItem('current_course', JSON.stringify(updatedCourse));
@@ -430,17 +492,36 @@ const Step4 = ({ goBackToPreviousStep, onSubmit }) => {
         console.error('File-based API error:', fileApiError);
       }
 
-      // Try the direct course creation API as fallback
+      // Try the direct course API as fallback
       try {
-        console.log('Using direct course creation API...');
+        console.log('Using direct course API as fallback...');
 
-        // Call the direct API
-        const result = await createDirectCourse(minimalCourse);
+        // Call the appropriate direct API based on whether we're editing or creating
+        let result;
+        if (isEditing) {
+          console.log('Updating existing course with direct API, ID:', courseId);
+          // Note: We're using createDirectCourse for both create and update
+          result = await createDirectCourse({
+            ...minimalCourse,
+            id: courseId,
+            faqs: formData.faqs || [],
+            tags: formData.tags || [],
+            scheduling: schedulingData,
+            color: currentCourse.color,
+            icon: currentCourse.icon,
+            promoVideoUrl: currentCourse.promoVideoUrl,
+            lectures: currentCourse.lectures || []
+          });
+        } else {
+          console.log('Creating new course with direct API');
+          result = await createDirectCourse(minimalCourse);
+        }
+
         console.log('Direct API response:', result);
 
         if (result.success) {
           // Success! Update localStorage and redirect
-          toast.success('Course created successfully!', { id: 'create-course' });
+          toast.success(isEditing ? 'Course updated successfully!' : 'Course created successfully!', { id: 'create-course' });
 
           // Create the updated course object
           const updatedCourse = {
@@ -453,8 +534,12 @@ const Step4 = ({ goBackToPreviousStep, onSubmit }) => {
             updatedAt: new Date().toISOString()
           };
 
-          // Save to localStorage
-          await addCourse(updatedCourse);
+          // Save to localStorage - if editing, update the existing course
+          if (isEditing) {
+            await updateCourseInLocalStorage(courseId, updatedCourse);
+          } else {
+            await addCourse(updatedCourse);
+          }
 
           // Also update current_course in localStorage
           localStorage.setItem('current_course', JSON.stringify(updatedCourse));
@@ -472,17 +557,36 @@ const Step4 = ({ goBackToPreviousStep, onSubmit }) => {
         console.error('Direct API error:', directApiError);
       }
 
-      // Try the simplified course creation API as fallback
+      // Try the simplified course API as fallback
       try {
-        console.log('Using simplified course creation API...');
+        console.log('Using simplified course API as fallback...');
 
-        // Call the simplified API
-        const result = await createSimpleCourse(minimalCourse);
+        // Call the appropriate simplified API based on whether we're editing or creating
+        let result;
+        if (isEditing) {
+          console.log('Updating existing course with simplified API, ID:', courseId);
+          // Note: We're using createSimpleCourse for both create and update
+          result = await createSimpleCourse({
+            ...minimalCourse,
+            id: courseId,
+            faqs: formData.faqs || [],
+            tags: formData.tags || [],
+            scheduling: schedulingData,
+            color: currentCourse.color,
+            icon: currentCourse.icon,
+            promoVideoUrl: currentCourse.promoVideoUrl,
+            lectures: currentCourse.lectures || []
+          });
+        } else {
+          console.log('Creating new course with simplified API');
+          result = await createSimpleCourse(minimalCourse);
+        }
+
         console.log('Simplified API response:', result);
 
         if (result.success) {
           // Success! Update localStorage and redirect
-          toast.success('Course created successfully!', { id: 'create-course' });
+          toast.success(isEditing ? 'Course updated successfully!' : 'Course created successfully!', { id: 'create-course' });
 
           // Create the updated course object
           const updatedCourse = {
@@ -495,8 +599,12 @@ const Step4 = ({ goBackToPreviousStep, onSubmit }) => {
             updatedAt: new Date().toISOString()
           };
 
-          // Save to localStorage
-          await addCourse(updatedCourse);
+          // Save to localStorage - if editing, update the existing course
+          if (isEditing) {
+            await updateCourseInLocalStorage(courseId, updatedCourse);
+          } else {
+            await addCourse(updatedCourse);
+          }
 
           // Also update current_course in localStorage
           localStorage.setItem('current_course', JSON.stringify(updatedCourse));

@@ -9,7 +9,7 @@ const getBackendUrl = () => {
 export const createDirectCourse = async (courseData) => {
   try {
     console.log('Creating course with direct API:', courseData);
-    
+
     // Create a simplified course object
     const simplifiedCourse = {
       title: courseData.title,
@@ -24,15 +24,15 @@ export const createDirectCourse = async (courseData) => {
       faqs: courseData.faqs || [],
       tags: courseData.tags || []
     };
-    
+
     // Make the API call
     const response = await axios.post(
       `${getBackendUrl()}/api/direct-courses/create`,
       simplifiedCourse
     );
-    
+
     console.log('Direct course creation response:', response.data);
-    
+
     return response.data;
   } catch (error) {
     console.error('Error creating course with direct API:', error);

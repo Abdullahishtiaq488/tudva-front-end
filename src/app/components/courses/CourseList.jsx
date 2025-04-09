@@ -10,6 +10,7 @@ import { getAllCourses } from "@/utils/courseSync";
 import { getAllSimpleCourses } from "@/utils/simpleCourseApi";
 import { getAllDirectCourses } from "@/utils/directCourseApi";
 import { getAllFileCourses } from "@/utils/fileCourseApi";
+import CourseCardSkeleton from "./CourseCardSkeleton";
 
 // Mock courses for fallback
 const getMockCourses = () => {
@@ -186,14 +187,24 @@ const CourseList = () => {
   const [sortBy, setSortBy] = useState(urlSortBy);
   const [page, setPage] = useState(urlPage);
   const [totalPages, setTotalPages] = useState(1);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const getCourses = async () => {
-      const { courses, totalPages } = await fetchCourses(search, category, sortBy, page);
+      setIsLoading(true);
+      try {
+        const { courses, totalPages } = await fetchCourses(search, category, sortBy, page);
 
-      console.log("Fetched Courses:", courses);
-      setCourses(courses);
-      setTotalPages(totalPages);
+        console.log("Fetched Courses:", courses);
+        setCourses(courses);
+        setTotalPages(totalPages);
+      } catch (error) {
+        console.error("Error fetching courses:", error);
+        setCourses([]);
+        setTotalPages(1);
+      } finally {
+        setIsLoading(false);
+      }
     };
     getCourses();
   }, [search, category, sortBy, page]);
@@ -277,12 +288,18 @@ const CourseList = () => {
         </Row>
 
         <Row className="g-4 justify-content-center">
-          {courses.length > 0 ? (
+          {isLoading ? (
+            // Show skeleton loaders when loading
+            Array(6).fill(0).map((_, idx) => (
+              <Col lg={6} xxl={6} key={`skeleton-${idx}`}>
+                <CourseCardSkeleton />
+              </Col>
+            ))
+          ) : courses.length > 0 ? (
+            // Show actual courses when loaded
             courses.map((course, idx) => (
               <Col lg={6} xxl={6} key={course.id || idx}>
-
                 <CourseCard
-
                   course={{
                     id: course.id,
                     title: course.title || "Untitled Course",
@@ -295,10 +312,10 @@ const CourseList = () => {
                     icon: course.icon || "FaRegStar",
                     status: course.status || "pending",
                     instructor_id: course.instructor_id || "",
-                    lectures: course.modules_count || 0,
+                    lectures: course.lectures?.length || course.modules_count || 0,
                     duration: "Self-paced",
-                    rating: { star: 4 },
-                    badge: { text: course.status },
+                    rating: { star: course.averageRating || 5.0 },
+                    badge: { text: course.level || "All Levels" },
                     color: course.color
                   }}
                 />
