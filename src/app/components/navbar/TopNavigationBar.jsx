@@ -229,8 +229,8 @@ const TopNavigationBar = () => {
   const isCoursesPage = pathname === '/courses';
 
   return <>
-    <header className={clsx("navbar-light navbar-sticky", { 'navbar-sticky-on': scrollY >= 400 || isCoursesPage })}>
-      <nav className="navbar navbar-expand-xl z-index-9">
+    <header className={clsx("navbar-light navbar-sticky bg-white", { 'navbar-sticky-on': scrollY >= 400 || isCoursesPage })}>
+      <nav className="navbar navbar-expand-xl">
         <Container>
           <LogoBox height={36} width={170} />
           <button onClick={toggle} className="navbar-toggler ms-auto" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" aria-expanded="false" aria-label="Toggle navigation">
@@ -269,7 +269,7 @@ const TopNavigationBar = () => {
         </Container>
       </nav>
       <hr className="my-0" />
-      <nav className="navbar navbar-expand-xl nav-category">
+      <nav className="navbar navbar-expand-xl nav-category bg-white">
         <Container className="px-0">
           <button onClick={toggleCategory} className="navbar-toggler m-auto w-100" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse2" aria-controls="navbarCollapse2" aria-expanded="false" aria-label="Toggle navigation">
             <BsGridFill /> Category

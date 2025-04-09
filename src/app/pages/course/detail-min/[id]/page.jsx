@@ -72,9 +72,12 @@ const DetailMinimal = () => {
         const courseData = {
           course: {
             ...course,
-            modules_count: course.modulesCount || 4,
-            short_description: course.shortDesription || '',
+            modules_count: course.modulesCount || course.modules_count || 4,
+            short_description: course.shortDesription || course.short_description || '',
             level: course.level || 'Beginner',
+            color: course.color || '#ffffff',
+            icon: course.icon || 'FaBook',
+            promo_video_url: course.promo_video_url || course.promoVideoUrl || '',
             instructor: {
               name: 'Instructor Name',
               title: 'Course Instructor',
@@ -128,13 +131,15 @@ const DetailMinimal = () => {
             }
             moduleMap[moduleName].push({
               id: lecture.id,
-              title: lecture.topicName,
-              description: lecture.description,
+              title: lecture.topicName || lecture.title || 'Untitled Lecture',
+              description: lecture.description || '',
               duration: '10:00',
-              videoUrl: lecture.videoFile || 'https://www.youtube.com/embed/tXHviS-4ygo',
+              videoUrl: lecture.videoUrl || lecture.videoFile || 'https://www.youtube.com/embed/tXHviS-4ygo',
               watched: false
             });
           });
+
+          console.log('Created modules from lectures:', moduleMap);
 
           courseData.modules = moduleMap;
         } else {

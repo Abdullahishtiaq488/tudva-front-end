@@ -10,6 +10,8 @@ import { FaBaseballBall, FaHeart, FaNode, FaNodeJs, FaPython, FaRegClock, FaRegH
 import * as FaIcons from "react-icons/fa";
 
 const DynamicIcon = ({ iconName }) => {
+  console.log('Rendering icon:', iconName);
+
   // Check if the iconName is a full URL (from cloud storage)
   if (iconName && (iconName.includes('storage.googleapis.com') || iconName.includes('supabase.co'))) {
     return (
@@ -27,10 +29,10 @@ const DynamicIcon = ({ iconName }) => {
     // Fix the path by removing spaces and ensuring correct format
     // Try different path formats to ensure the icon is found
     const paths = [
-      `/assets/all%20icons%2096px/${iconName}`,
       `/assets/all icons 96px/${iconName}`,
-      `/public/assets/all%20icons%2096px/${iconName}`,
+      `/assets/all%20icons%2096px/${iconName}`,
       `/public/assets/all icons 96px/${iconName}`,
+      `/public/assets/all%20icons%2096px/${iconName}`,
       `/assets/icons/${iconName}`,
       `/public/assets/icons/${iconName}`
     ];
@@ -53,9 +55,11 @@ const DynamicIcon = ({ iconName }) => {
             console.log('Trying next path:', paths[currentIndex + 1]);
             e.target.src = paths[currentIndex + 1];
           } else {
-            console.error('All icon paths failed, using fallback image');
+            console.error('All icon paths failed, using fallback icon');
             e.target.onerror = null;
-            e.target.src = '/assets/images/courses/4by3/01.jpg'; // Fallback image
+            // Use a Font Awesome icon as fallback
+            e.target.style.display = 'none';
+            e.target.parentNode.innerHTML = '<i class="fas fa-book fs-1 text-primary"></i>';
           }
         }}
       />
@@ -66,7 +70,10 @@ const DynamicIcon = ({ iconName }) => {
   const IconComponent = FaIcons[iconName]; // Dynamically get the icon
 
   if (!IconComponent) {
-    return <p>Icon not found</p>;
+    console.warn('Icon not found:', iconName);
+    // Use a default icon
+    const DefaultIcon = FaIcons.FaBook;
+    return <DefaultIcon size={'sm'} className="w-25" />;
   }
 
   return <IconComponent size={'sm'} className="w-25" />;

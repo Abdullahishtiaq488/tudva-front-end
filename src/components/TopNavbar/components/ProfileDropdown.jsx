@@ -73,11 +73,15 @@ const ProfileDropdown = ({ className, isLoggedInUser }) => {
   const [imageError, setImageError] = useState(false);
   const [userData, setUserData] = useState(null);
 
+  // Default placeholder image for profile
+  const placeholderImage = '/assets/images/avatar/placeholder.svg';
+
   // Handle image loading error
   const handleImageError = () => {
-    console.log('Image failed to load, using default avatar');
+    console.log('Image failed to load, using placeholder avatar');
     setImageError(true);
-    setProfilePicture(avatar1);
+    // Try to use placeholder first, fall back to avatar1 if placeholder fails
+    setProfilePicture(placeholderImage);
   };
 
   // Fetch user data on component mount
@@ -147,7 +151,7 @@ const ProfileDropdown = ({ className, isLoggedInUser }) => {
     }
   }, [isLoggedInUser, imageError]);
 
-  return <Dropdown drop="start" className={className}>
+  return <Dropdown drop="start" className={`profile-dropdown ${className}`}>
     <DropdownToggle as='a' className="avatar avatar-sm p-0 arrow-none" id="profileDropdown" role="button" data-bs-auto-close="outside" data-bs-display="static" data-bs-toggle="dropdown" aria-expanded="false">
       {/* Always use regular img tag for better compatibility */}
       <img

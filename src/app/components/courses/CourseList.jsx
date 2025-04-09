@@ -11,38 +11,115 @@ import { getAllSimpleCourses } from "@/utils/simpleCourseApi";
 import { getAllDirectCourses } from "@/utils/directCourseApi";
 import { getAllFileCourses } from "@/utils/fileCourseApi";
 
+// Mock courses for fallback
+const getMockCourses = () => {
+  return [
+    {
+      id: 'mock-1',
+      title: 'Introduction to Web Development',
+      shortDesription: 'Learn the basics of HTML, CSS, and JavaScript',
+      description: 'This course covers the fundamentals of web development including HTML, CSS, and JavaScript.',
+      category: 'Digital',
+      level: 'Beginner',
+      language: 'English',
+      price: 0,
+      instructor: { name: 'John Doe' },
+      rating: 4.5,
+      reviews: 120,
+      students: 1500,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      status: 'published',
+      icon: '🌐',
+      color: '#4697ce'
+    },
+    {
+      id: 'mock-2',
+      title: 'Advanced JavaScript Programming',
+      shortDesription: 'Master modern JavaScript concepts and frameworks',
+      description: 'Take your JavaScript skills to the next level with advanced concepts and popular frameworks.',
+      category: 'Digital',
+      level: 'Advanced',
+      language: 'English',
+      price: 0,
+      instructor: { name: 'Jane Smith' },
+      rating: 4.8,
+      reviews: 85,
+      students: 950,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      status: 'published',
+      icon: '⚛️',
+      color: '#7EAA7E'
+    },
+    {
+      id: 'mock-3',
+      title: 'Cooking Basics',
+      shortDesription: 'Learn essential cooking techniques and recipes',
+      description: 'Start your culinary journey with fundamental cooking techniques and delicious recipes.',
+      category: 'Cooking',
+      level: 'Beginner',
+      language: 'English',
+      price: 0,
+      instructor: { name: 'Chef Mario' },
+      rating: 4.7,
+      reviews: 210,
+      students: 2200,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      status: 'published',
+      icon: '🍳',
+      color: '#FF6B6B'
+    }
+  ];
+};
+
 const fetchCourses = async (search, category, sortBy, page) => {
   try {
     // First, try to get courses from the backend using the file-based API
     let allCourses = [];
     try {
-      allCourses = await getAllFileCourses();
-      console.log('Courses from file-based API:', allCourses);
+      // Try all methods in parallel to speed up loading
+      const [fileCourses, directCourses, simpleCourses, localCourses] = await Promise.allSettled([
+        getAllFileCourses(),
+        getAllDirectCourses(),
+        getAllSimpleCourses(),
+        getAllCourses()
+      ]);
 
-      if (allCourses && allCourses.length > 0) {
-        // If we got courses from the file-based API, use them
+      console.log('Courses from file-based API:', fileCourses.status === 'fulfilled' ? fileCourses.value : 'Failed');
+      console.log('Courses from direct API:', directCourses.status === 'fulfilled' ? directCourses.value : 'Failed');
+      console.log('Courses from simplified API:', simpleCourses.status === 'fulfilled' ? simpleCourses.value : 'Failed');
+      console.log('Courses from localStorage:', localCourses.status === 'fulfilled' ? localCourses.value : 'Failed');
+
+      // Use the first successful result that has courses
+      if (fileCourses.status === 'fulfilled' && fileCourses.value && fileCourses.value.length > 0) {
+        allCourses = fileCourses.value;
         console.log('Using courses from file-based API');
+      } else if (directCourses.status === 'fulfilled' && directCourses.value && directCourses.value.length > 0) {
+        allCourses = directCourses.value;
+        console.log('Using courses from direct API');
+      } else if (simpleCourses.status === 'fulfilled' && simpleCourses.value && simpleCourses.value.length > 0) {
+        allCourses = simpleCourses.value;
+        console.log('Using courses from simplified API');
+      } else if (localCourses.status === 'fulfilled' && localCourses.value && localCourses.value.length > 0) {
+        allCourses = localCourses.value;
+        console.log('Using courses from localStorage');
       } else {
-        // If no courses from file-based API, try direct API
-        console.log('No courses from file-based API, trying direct API');
-        allCourses = await getAllDirectCourses();
-        console.log('Courses from direct API:', allCourses);
-
-        if (allCourses && allCourses.length > 0) {
-          // If we got courses from the direct API, use them
-          console.log('Using courses from direct API');
-        } else {
-          // If no courses from direct API, try simplified API
-          console.log('No courses from direct API, trying simplified API');
-          allCourses = await getAllSimpleCourses();
-          console.log('Courses from simplified API:', allCourses);
-        }
+        // If all else fails, use mock data
+        console.log('No courses found, using mock data');
+        allCourses = getMockCourses();
       }
     } catch (apiError) {
-      console.warn('Error fetching from APIs, falling back to localStorage:', apiError);
+      console.warn('Error fetching courses, using localStorage:', apiError);
       // Fall back to localStorage if APIs fail
-      allCourses = await getAllCourses();
-      console.log('Courses from localStorage:', allCourses);
+      try {
+        allCourses = await getAllCourses();
+        console.log('Using courses from localStorage:', allCourses);
+      } catch (localError) {
+        console.error('Error fetching from localStorage, using mock data:', localError);
+        allCourses = getMockCourses();
+      }
     }
 
     // Filter courses based on search and category

@@ -139,7 +139,7 @@ const NotificationDropdown = ({ className = '', dropDirection = 'start' }) => {
       show={isOpen}
       onToggle={handleToggle}
       drop={dropDirection}
-      className={`nav-item ${className}`}
+      className={`nav-item notification-dropdown ${className}`}
     >
       <DropdownToggle
         as="a"

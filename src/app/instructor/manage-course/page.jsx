@@ -277,10 +277,30 @@ const ManageCoursePage = () => {
                               alt={course.title}
                               style={{ width: '40px', height: '40px' }}
                               onError={(e) => {
+                                console.error(`Failed to load icon: ${course.icon}`);
                                 e.target.onerror = null;
-                                // Use a Font Awesome icon instead of a placeholder image
-                                e.target.style.display = 'none';
-                                e.target.parentNode.innerHTML = '<i class="fas fa-image fs-3 text-orange"></i>';
+                                // Try alternative paths
+                                const altPaths = [
+                                  `/assets/all%20icons%2096px/${course.icon}`,
+                                  `/public/assets/all icons 96px/${course.icon}`,
+                                  `/public/assets/all%20icons%2096px/${course.icon}`,
+                                  `/assets/icons/${course.icon}`,
+                                ];
+
+                                // Try the first alternative path
+                                if (altPaths.length > 0) {
+                                  e.target.src = altPaths[0];
+                                  // Set up error handler for the alternative path
+                                  e.target.onerror = () => {
+                                    // If all paths fail, use a Font Awesome icon
+                                    e.target.style.display = 'none';
+                                    e.target.parentNode.innerHTML = '<i class="fas fa-book fs-3 text-orange"></i>';
+                                  };
+                                } else {
+                                  // Use a Font Awesome icon as fallback
+                                  e.target.style.display = 'none';
+                                  e.target.parentNode.innerHTML = '<i class="fas fa-book fs-3 text-orange"></i>';
+                                }
                               }}
                             />
                           </div>
@@ -302,7 +322,7 @@ const ManageCoursePage = () => {
                         <div className="d-sm-flex">
                           <p className="h6 fw-light mb-0 small me-3">
                             <FaTable className="text-orange me-2" />
-                            {course.lectures?.length || 0} lectures
+                            {Array.isArray(course.lectures) ? course.lectures.length : 0} lectures
                           </p>
                           <p className="h6 fw-light mb-0 small">
                             <FaCheckCircle className="text-success me-2" />

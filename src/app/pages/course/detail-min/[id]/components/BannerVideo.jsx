@@ -69,24 +69,40 @@ const BannerVideo = ({ course, selectedVideo }) => {
             <Col xs={12}>
               <div className="video-player rounded-3">
                 {videoSource ? (
-                  // <Plyr
-                  //   playsInline
-                  //   crossOrigin="anonymous"
-                  //   controls
-                  //   source={videoSource.videoUrl}
-                  // />
-                  <video
-                    controls
-                    className="w-100 rounded-lg shadow-lg"
-                    style={{ maxHeight: '500px', objectFit: 'contain' }}
-                    onError={(e) => console.error("Video error:", e)}
-                  >
-                    <source
+                  // Check if it's a YouTube URL
+                  (selectedVideo?.videoUrl?.includes('youtube.com') || currentVideo?.videoUrl?.includes('youtube.com')) ? (
+                    // Render YouTube iframe
+                    <iframe
+                      className="w-100 rounded-lg shadow-lg"
+                      style={{ height: '500px' }}
                       src={selectedVideo?.videoUrl || currentVideo?.videoUrl || 'https://www.youtube.com/embed/tXHviS-4ygo'}
-                      type="video/mp4"
-                    />
-                    Your browser does not support the video tag.
-                  </video>
+                      title="YouTube video player"
+                      frameBorder="0"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                    ></iframe>
+                  ) : (
+                    // Render regular video player for direct video URLs
+                    <video
+                      controls
+                      className="w-100 rounded-lg shadow-lg"
+                      style={{ maxHeight: '500px', objectFit: 'contain' }}
+                      onError={(e) => {
+                        console.error("Video error:", e);
+                        // Try to display a fallback message or image
+                        e.target.outerHTML = `<div class="text-center p-5 bg-light rounded-3">
+                          <h4>Video could not be loaded</h4>
+                          <p>The video may be unavailable or in an unsupported format.</p>
+                        </div>`;
+                      }}
+                    >
+                      <source
+                        src={selectedVideo?.videoUrl || currentVideo?.videoUrl || ''}
+                        type="video/mp4"
+                      />
+                      Your browser does not support the video tag.
+                    </video>
+                  )
                 ) : (
                   <div className="text-center p-5 bg-light rounded-3">
                     <h4>No video selected or available</h4>
