@@ -1,18 +1,17 @@
 import { useLayoutContext } from "@/context/useLayoutContext";
-import Image from "next/image";
+import { useAuth } from "@/context/AuthContext";
 import { Dropdown, DropdownDivider, DropdownItem, DropdownMenu, DropdownToggle } from "react-bootstrap";
 import { BsGear, BsInfoCircle, BsPerson, BsPower } from "react-icons/bs";
 import avatar1 from '@/assets/images/avatar/01.jpg';
 import { toSentenceCase } from "@/utils/change-casing";
 import clsx from "clsx";
 import Link from "next/link";
-import axios from "axios";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
-import { checkIsLoggedInUser } from "@/helpers/checkLoggedInUser";
-import { useEffect, useState } from "react";
-const ProfileDropdown = ({ className, isLoggedInUser }) => {
+import { useState, useEffect } from "react";
+const ProfileDropdown = ({ className }) => {
   const { changeTheme, theme } = useLayoutContext();
+  const { user, logout, isAuthenticated } = useAuth();
   const themeModes = [{
     icon: <svg xmlns="http://www.w3.org/2000/svg" width={16} height={16} fill="currentColor" className="bi bi-sun fa-fw mode-switch" viewBox="0 0 16 16">
       <path d="M8 11a3 3 0 1 1 0-6 3 3 0 0 1 0 6zm0 1a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM8 0a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 0zm0 13a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 13zm8-5a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2a.5.5 0 0 1 .5.5zM3 8a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2A.5.5 0 0 1 3 8zm10.657-5.657a.5.5 0 0 1 0 .707l-1.414 1.415a.5.5 0 1 1-.707-.708l1.414-1.414a.5.5 0 0 1 .707 0zm-9.193 9.193a.5.5 0 0 1 0 .707L3.05 13.657a.5.5 0 0 1-.707-.707l1.414-1.414a.5.5 0 0 1 .707 0zm9.193 2.121a.5.5 0 0 1-.707 0l-1.414-1.414a.5.5 0 0 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .707zM4.464 4.465a.5.5 0 0 1-.707 0L2.343 3.05a.5.5 0 1 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .708z" />
@@ -36,42 +35,19 @@ const ProfileDropdown = ({ className, isLoggedInUser }) => {
 
   const router = useRouter();
 
-
-
-
   const handleLogout = async () => {
     try {
-      // Clear localStorage
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user_data');
-        localStorage.removeItem('user_email');
-      }
-
-      // Call logout API
-      const response = await axios.get('/api/auth/logout');
-
+      await logout();
       toast.success("Logged out successfully");
-      router.push('/auth/sign-in');
     } catch (error) {
       console.error('Logout error:', error);
-
-      // Even if API fails, clear localStorage and redirect
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user_data');
-        localStorage.removeItem('user_email');
-      }
-
-      toast.success("Logged out successfully");
-      router.push('/auth/sign-in');
+      toast.error("Logout failed");
     }
   }
 
   // Use user's profile picture if available, otherwise use default avatar
   const [profilePicture, setProfilePicture] = useState(avatar1);
   const [imageError, setImageError] = useState(false);
-  const [userData, setUserData] = useState(null);
 
   // Default placeholder image for profile
   const placeholderImage = '/assets/images/avatar/placeholder.svg';
@@ -84,72 +60,12 @@ const ProfileDropdown = ({ className, isLoggedInUser }) => {
     setProfilePicture(placeholderImage);
   };
 
-  // Fetch user data on component mount
-  useEffect(() => {
-    const fetchUserData = async () => {
-      try {
-        // Get user data from localStorage
-        const storedUserData = localStorage.getItem('user_data');
-        if (storedUserData) {
-          const parsedData = JSON.parse(storedUserData);
-          setUserData(parsedData);
-
-          // Set profile picture if available
-          if (parsedData.profilePicture && !imageError) {
-            setProfilePicture(parsedData.profilePicture);
-          }
-        } else {
-          // If no user data in localStorage, create minimal data
-          const token = localStorage.getItem('token');
-          const email = localStorage.getItem('user_email') || 'user@example.com';
-          const name = email.split('@')[0];
-
-          if (token) {
-            const minimalUserData = {
-              id: `user_${Date.now()}`,
-              email,
-              name,
-              fullName: name,
-              role: localStorage.getItem('user_role') || 'learner'
-            };
-
-            setUserData(minimalUserData);
-            localStorage.setItem('user_data', JSON.stringify(minimalUserData));
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching user data:', error);
-      }
-    };
-
-    fetchUserData();
-
-    // Set up an event listener to refresh user data when localStorage changes
-    const handleStorageChange = (e) => {
-      if (e.key === 'user_data') {
-        try {
-          const newUserData = JSON.parse(e.newValue);
-          setUserData(newUserData);
-
-          if (newUserData?.profilePicture && !imageError) {
-            setProfilePicture(newUserData.profilePicture);
-          }
-        } catch (error) {
-          console.error('Error handling storage change:', error);
-        }
-      }
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
-  }, [imageError]);
-
   // Update profile picture when user changes
   useEffect(() => {
-    if (isLoggedInUser?.profilePicture && !imageError) {
-      setProfilePicture(isLoggedInUser.profilePicture);
+    if (user?.profilePicture && !imageError) {
+      setProfilePicture(user.profilePicture);
     }
-  }, [isLoggedInUser, imageError]);
+  }, [user, imageError]);
 
   return <Dropdown drop="start" className={`profile-dropdown ${className}`}>
     <DropdownToggle as='a' className="avatar avatar-sm p-0 arrow-none" id="profileDropdown" role="button" data-bs-auto-close="outside" data-bs-display="static" data-bs-toggle="dropdown" aria-expanded="false">
@@ -180,18 +96,18 @@ const ProfileDropdown = ({ className, isLoggedInUser }) => {
             />
           </div>
           <div>
-            <a className="h6" href="#">{userData?.fullName || userData?.name || (isLoggedInUser?.fullName || '')}</a>
-            <p className="small m-0">{userData?.email || (isLoggedInUser?.email || '')}</p>
+            <a className="h6" href="#">{user?.fullName || user?.name || 'User'}</a>
+            <p className="small m-0">{user?.email || ''}</p>
           </div>
         </div>
       </li>
       <li> <DropdownDivider /></li>
       <li>
         <DropdownItem href={
-          (userData?.role === 'instructor' || isLoggedInUser?.role === 'instructor') ?
-            "/instructor/profile"
+          user?.role === 'instructor' ?
+            "/instructor/edit-profile"
             :
-            "/student/profile"
+            "/student/edit-profile"
         }>
           <BsPerson className="fa-fw me-2" />
           Profile and Account

@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { useAuth } from '@/context/AuthContext';
 
 // Helper function to get auth token
 const getAuthHeader = () => {
@@ -6,24 +7,54 @@ const getAuthHeader = () => {
   return token ? { Authorization: `Bearer ${token}` } : {};
 };
 
+// Helper function to get user ID
+const getUserId = () => {
+  const userData = localStorage.getItem('user_data');
+  if (userData) {
+    try {
+      const user = JSON.parse(userData);
+      return user.id;
+    } catch (error) {
+      console.error('Error parsing user data:', error);
+    }
+  }
+  return null;
+};
+
 /**
  * Get notifications for the current user
  */
 export const getNotifications = async (page = 1, limit = 10, unreadOnly = false) => {
   try {
+    const userId = getUserId();
+    if (!userId) {
+      return { success: false, error: 'User not authenticated', notifications: [], unreadCount: 0 };
+    }
+
     const queryParams = new URLSearchParams();
     queryParams.append('page', page);
     queryParams.append('limit', limit);
     queryParams.append('unreadOnly', unreadOnly);
-    
-    const response = await axios.get(
-      `/api/notifications?${queryParams.toString()}`,
-      { headers: getAuthHeader() }
-    );
-    return response.data;
+
+    // Try file-based API first
+    try {
+      const response = await axios.get(
+        `/api/file-notifications/user/${userId}?${queryParams.toString()}`
+      );
+      return response.data;
+    } catch (fileError) {
+      console.warn('File-based API failed for notifications:', fileError.message);
+
+      // Fall back to regular API
+      const response = await axios.get(
+        `/api/notifications?${queryParams.toString()}`,
+        { headers: getAuthHeader() }
+      );
+      return response.data;
+    }
   } catch (error) {
     console.error('Error fetching notifications:', error);
-    throw error;
+    return { success: false, error: error.message, notifications: [], unreadCount: 0 };
   }
 };
 
@@ -32,15 +63,32 @@ export const getNotifications = async (page = 1, limit = 10, unreadOnly = false)
  */
 export const markNotificationAsRead = async (notificationId) => {
   try {
-    const response = await axios.put(
-      `/api/notifications/read/${notificationId}`,
-      {},
-      { headers: getAuthHeader() }
-    );
-    return response.data;
+    const userId = getUserId();
+    if (!userId) {
+      return { success: false, error: 'User not authenticated' };
+    }
+
+    // Try file-based API first
+    try {
+      const response = await axios.put(
+        `/api/file-notifications/${notificationId}/read`,
+        { userId }
+      );
+      return response.data;
+    } catch (fileError) {
+      console.warn('File-based API failed for marking notification as read:', fileError.message);
+
+      // Fall back to regular API
+      const response = await axios.put(
+        `/api/notifications/read/${notificationId}`,
+        {},
+        { headers: getAuthHeader() }
+      );
+      return response.data;
+    }
   } catch (error) {
     console.error('Error marking notification as read:', error);
-    throw error;
+    return { success: false, error: error.message };
   }
 };
 
@@ -49,15 +97,31 @@ export const markNotificationAsRead = async (notificationId) => {
  */
 export const markAllNotificationsAsRead = async () => {
   try {
-    const response = await axios.put(
-      '/api/notifications/read-all',
-      {},
-      { headers: getAuthHeader() }
-    );
-    return response.data;
+    const userId = getUserId();
+    if (!userId) {
+      return { success: false, error: 'User not authenticated' };
+    }
+
+    // Try file-based API first
+    try {
+      const response = await axios.put(
+        `/api/file-notifications/user/${userId}/read-all`
+      );
+      return response.data;
+    } catch (fileError) {
+      console.warn('File-based API failed for marking all notifications as read:', fileError.message);
+
+      // Fall back to regular API
+      const response = await axios.put(
+        '/api/notifications/read-all',
+        {},
+        { headers: getAuthHeader() }
+      );
+      return response.data;
+    }
   } catch (error) {
     console.error('Error marking all notifications as read:', error);
-    throw error;
+    return { success: false, error: error.message };
   }
 };
 
@@ -66,13 +130,30 @@ export const markAllNotificationsAsRead = async () => {
  */
 export const deleteNotification = async (notificationId) => {
   try {
-    const response = await axios.delete(
-      `/api/notifications/${notificationId}`,
-      { headers: getAuthHeader() }
-    );
-    return response.data;
+    const userId = getUserId();
+    if (!userId) {
+      return { success: false, error: 'User not authenticated' };
+    }
+
+    // Try file-based API first
+    try {
+      const response = await axios.delete(
+        `/api/file-notifications/${notificationId}`,
+        { data: { userId } }
+      );
+      return response.data;
+    } catch (fileError) {
+      console.warn('File-based API failed for deleting notification:', fileError.message);
+
+      // Fall back to regular API
+      const response = await axios.delete(
+        `/api/notifications/${notificationId}`,
+        { headers: getAuthHeader() }
+      );
+      return response.data;
+    }
   } catch (error) {
     console.error('Error deleting notification:', error);
-    throw error;
+    return { success: false, error: error.message };
   }
 };

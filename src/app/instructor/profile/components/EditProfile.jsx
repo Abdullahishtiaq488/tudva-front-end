@@ -9,7 +9,8 @@ import { BsPlus, BsX, BsTrash, BsEnvelopeFill } from 'react-icons/bs';
 import Image from 'next/image';
 import axios from 'axios';
 import { toast } from 'react-hot-toast'; // Import toast
-import { checkIsLoggedInUser } from "@/helpers/checkLoggedInUser"; // Import your function
+import { useAuth } from "@/context/AuthContext"; // Import auth context
+import authService from "@/services/authService"; // Import auth service
 import IconTextFormInput from '@/components/form/IconTextFormInput'; // Import
 import { FaUser } from 'react-icons/fa'; // Import icons
 import defaultImage from '../../../../assets/images/avatar/11.jpg';
@@ -33,11 +34,10 @@ const profileSchema = yup.object({
 });
 
 const EditProfile = () => {
+  const { user, loading: authLoading, refreshUser } = useAuth();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [user, setUser] = useState(null); // Use 'any' or a more specific type
   const [image, setImage] = useState(null);
-  const [token, setToken] = useState(null);
   const fileInputRef = useRef(null);
   const router = useRouter();
 
@@ -47,63 +47,60 @@ const EditProfile = () => {
 
   // Fetch user data on component mount and when user changes
   useEffect(() => {
-    const fetchData = async () => {
+    const initializeForm = async () => {
       setLoading(true);
       setError(null);
 
       try {
-        // Get user data from localStorage only
-        const { user, token, error } = await checkIsLoggedInUser();
-
-        if (error) {
-          setError(error || 'Not authenticated');
-          setLoading(false);
-          return;
-        }
-
         if (!user) {
           setError('User not found');
-          setLoading(false);
           return;
         }
 
-        setUser(user);
-        setToken(token);
-
+        // Initialize form with user data
         reset({
           fullName: user.fullName || user.name,
           email: user.email,
-          phoneNo: user.phoneNo,
-          aboutMe: user.aboutMe,
-          profilePicture: user.profilePicture,
+          phoneNo: user.phoneNo || '',
+          aboutMe: user.aboutMe || '',
+          profilePicture: user.profilePicture || '',
         });
 
+        // Set profile image if available
         if (user.profilePicture) {
           setImage(user.profilePicture);
         }
+
+        console.log('Form initialized with user data:', user);
       } catch (error) {
-        console.error('Error in fetchData:', error);
+        console.error('Error initializing form:', error);
         setError('Failed to load user data');
       } finally {
         setLoading(false);
       }
     };
 
-    fetchData();
-  }, [reset]);
+    // Only initialize when user data is available and not loading
+    if (!authLoading && user) {
+      initializeForm();
+    } else if (!authLoading && !user) {
+      setError('Not authenticated');
+      setLoading(false);
+    }
+  }, [user, authLoading, reset]);
 
 
   const onSubmit = async (data) => {
     setError(null);
     setLoading(true);
     try {
-      // Get current user data from localStorage
-      const storedUserData = localStorage.getItem('user_data');
-      let userData = storedUserData ? JSON.parse(storedUserData) : {};
+      if (!user || !user.id) {
+        throw new Error('User not authenticated');
+      }
 
-      // Update user data with form values
-      userData = {
-        ...userData,
+      // Create updated user data
+      const updatedUserData = {
+        ...user,
         fullName: data.fullName,
         name: data.fullName, // Keep name and fullName in sync
         phoneNo: data.phoneNo,
@@ -111,28 +108,45 @@ const EditProfile = () => {
       };
 
       // Handle profilePicture separately
-      if (image !== userData.profilePicture) {
-        userData.profilePicture = image;
+      if (image !== user.profilePicture) {
+        updatedUserData.profilePicture = image;
       }
 
-      console.log('Updated user data:', userData);
+      console.log('Updating user profile with:', updatedUserData);
 
-      // Save updated user data to localStorage
-      localStorage.setItem('user_data', JSON.stringify(userData));
+      // Update user data in the backend
+      try {
+        // Make API call to update user profile
+        const response = await axios.post('/api/user/update-profile', {
+          userId: user.id,
+          userData: updatedUserData
+        });
 
-      // Update state
-      setUser(userData);
+        if (response.data.success) {
+          // Update local storage with new user data
+          authService.setUser(updatedUserData);
 
-      // Show success message
-      toast.success('Profile updated successfully!');
+          // Refresh user data in context
+          await refreshUser();
 
-      // Refresh the page to show updated data
-      setTimeout(() => {
-        window.location.reload();
-      }, 1000);
+          // Show success message
+          toast.success('Profile updated successfully!');
+        } else {
+          throw new Error(response.data.message || 'Failed to update profile');
+        }
+      } catch (apiError) {
+        console.error('API error:', apiError);
+
+        // Fallback: Update local storage even if API fails
+        authService.setUser(updatedUserData);
+        await refreshUser();
+
+        toast.warn('Profile updated locally, but server update failed');
+      }
     } catch (error) {
       console.error('Profile update error:', error);
       setError('Failed to update profile: ' + (error.message || 'Unknown error'));
+      toast.error('Failed to update profile: ' + (error.message || 'Unknown error'));
     } finally {
       setLoading(false);
     }

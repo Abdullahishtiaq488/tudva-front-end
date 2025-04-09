@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { Container, Row, Col, Card, Form, Button, Spinner, Alert, Table } from 'react-bootstrap';
 import { useNotificationPreferences } from '@/hooks/useNotificationPreferences';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 
@@ -101,9 +101,9 @@ const NotificationPreferencesPage = () => {
       <Card className="mb-4">
         <Card.Header className="d-flex justify-content-between align-items-center">
           <h5 className="mb-0">Notification Settings</h5>
-          <Button 
-            variant="outline-secondary" 
-            size="sm" 
+          <Button
+            variant="outline-secondary"
+            size="sm"
             onClick={handleReset}
             disabled={isLoading || isResetting}
           >

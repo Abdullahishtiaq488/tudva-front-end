@@ -5,12 +5,12 @@ import { Button, Spinner } from 'react-bootstrap';
 import { FaHeart, FaRegHeart } from 'react-icons/fa';
 import { toast } from 'react-hot-toast';
 import { addToFavorites, removeFromFavorites, checkIsFavorite } from '@/services/favoriteService';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 
-const FavoriteButton = ({ 
-  courseId, 
-  variant = 'primary', 
+const FavoriteButton = ({
+  courseId,
+  variant = 'primary',
   size = 'sm',
   className = '',
   iconOnly = false,
@@ -54,7 +54,7 @@ const FavoriteButton = ({
 
     try {
       setIsProcessing(true);
-      
+
       if (isFavorite) {
         await removeFromFavorites(courseId);
         toast.success('Removed from favorites');
@@ -62,9 +62,9 @@ const FavoriteButton = ({
         await addToFavorites(courseId);
         toast.success('Added to favorites');
       }
-      
+
       setIsFavorite(!isFavorite);
-      
+
       // Call the callback if provided
       if (onFavoriteChange) {
         onFavoriteChange(!isFavorite);
@@ -79,17 +79,17 @@ const FavoriteButton = ({
 
   if (isLoading) {
     return (
-      <Button 
-        variant={variant} 
-        size={size} 
+      <Button
+        variant={variant}
+        size={size}
         className={`favorite-button ${className}`}
         disabled
       >
-        <Spinner 
-          animation="border" 
-          size="sm" 
-          role="status" 
-          aria-hidden="true" 
+        <Spinner
+          animation="border"
+          size="sm"
+          role="status"
+          aria-hidden="true"
         />
         {!iconOnly && <span className="ms-2">Loading...</span>}
       </Button>
@@ -97,29 +97,29 @@ const FavoriteButton = ({
   }
 
   return (
-    <Button 
-      variant={variant} 
-      size={size} 
+    <Button
+      variant={variant}
+      size={size}
       className={`favorite-button ${className}`}
       onClick={handleToggleFavorite}
       disabled={isProcessing}
     >
       {isProcessing ? (
-        <Spinner 
-          animation="border" 
-          size="sm" 
-          role="status" 
-          aria-hidden="true" 
+        <Spinner
+          animation="border"
+          size="sm"
+          role="status"
+          aria-hidden="true"
         />
       ) : (
         isFavorite ? <FaHeart /> : <FaRegHeart />
       )}
       {!iconOnly && (
         <span className="ms-2">
-          {isProcessing 
-            ? 'Processing...' 
-            : isFavorite 
-              ? 'Remove from Favorites' 
+          {isProcessing
+            ? 'Processing...'
+            : isFavorite
+              ? 'Remove from Favorites'
               : 'Add to Favorites'
           }
         </span>

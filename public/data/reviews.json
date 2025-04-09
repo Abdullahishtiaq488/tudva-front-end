@@ -1,0 +1,16 @@
+{
+  "reviews": [
+    {
+      "id": "5d5e1e2d-f5cf-4267-be11-86beaf840f13",
+      "user_id": "b5b3c8d0-bad3-486c-85ff-40dbb5391d43",
+      "userName": "Abdullah Khan",
+      "courseId": "c4fcbd81-cafe-4517-9a88-0743baec558a",
+      "content": "Hello Friend really love your voice",
+      "rating": 4,
+      "isVisible": true,
+      "helpfulCount": 0,
+      "createdAt": "2025-04-09T22:46:13.976Z",
+      "updatedAt": "2025-04-09T22:46:13.976Z"
+    }
+  ]
+}

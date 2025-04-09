@@ -4,8 +4,10 @@ import React, { useState } from 'react';
 import { Button, Form } from 'react-bootstrap';
 import { FaStar } from 'react-icons/fa';
 import { toast } from 'react-hot-toast';
+import { useAuth } from '@/context/AuthContext';
 
 const ReviewForm = ({ courseId, onReviewSubmitted, existingReview = null }) => {
+  const { user, isAuthenticated } = useAuth();
   const [rating, setRating] = useState(existingReview?.rating || 0);
   const [hoverRating, setHoverRating] = useState(0);
   const [content, setContent] = useState(existingReview?.content || '');
@@ -30,11 +32,11 @@ const ReviewForm = ({ courseId, onReviewSubmitted, existingReview = null }) => {
     setIsSubmitting(true);
 
     try {
-      // Check if user is logged in by checking localStorage
-      const userId = localStorage.getItem('userId');
-      if (!userId) {
-        // If not logged in, show a message but don't prevent submission
-        console.warn('User not logged in, but continuing with review submission');
+      // Check if user is authenticated
+      if (!isAuthenticated || !user) {
+        toast.error('Please log in to submit a review');
+        setError('You must be logged in to submit a review');
+        return;
       }
 
       // Call the onReviewSubmitted callback with the review data
@@ -42,8 +44,8 @@ const ReviewForm = ({ courseId, onReviewSubmitted, existingReview = null }) => {
         rating,
         content,
         reviewId: existingReview?.id,
-        // Use a default user ID if none is found
-        userId: userId || 'anonymous_user'
+        userId: user.id,
+        userName: user.fullName || user.name
       });
 
       if (result.success) {

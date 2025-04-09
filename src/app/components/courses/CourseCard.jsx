@@ -121,14 +121,45 @@ const CourseCard = ({
     toggle
   } = useToggle(true);
   const router = useRouter();
-  // Log the course ID to help with debugging
-  console.log('Course card clicked with ID:', id);
+  // Log the course data to help with debugging
+  console.log('Course card data:', course);
+  console.log('Course card ID:', id);
+
+  const handleCardClick = () => {
+    // Store the course in localStorage before navigating
+    try {
+      console.log('Storing course in localStorage before navigation:', course);
+      localStorage.setItem(`course_${id}`, JSON.stringify(course));
+
+      // Also update the courses array if it exists
+      const coursesStr = localStorage.getItem('courses');
+      if (coursesStr) {
+        const courses = JSON.parse(coursesStr);
+        // Check if course already exists
+        const existingIndex = courses.findIndex(c => c.id === id);
+        if (existingIndex >= 0) {
+          // Update existing course
+          courses[existingIndex] = course;
+        } else {
+          // Add new course
+          courses.push(course);
+        }
+        localStorage.setItem('courses', JSON.stringify(courses));
+      } else {
+        // Create new courses array
+        localStorage.setItem('courses', JSON.stringify([course]));
+      }
+    } catch (error) {
+      console.error('Error storing course in localStorage:', error);
+    }
+
+    // Use the correct path format with leading slash
+    console.log('Navigating to course detail page with ID:', id);
+    router.push(`/pages/course/detail-min/${id}`);
+  };
 
   return <Card
-    onClick={() => {
-      // Use the correct path format with leading slash
-      router.push(`/pages/course/detail-min/${id}`);
-    }}
+    onClick={handleCardClick}
     className="rounded overflow-hidden shadow"
     role="button"
     style={{ cursor: 'pointer' }}>

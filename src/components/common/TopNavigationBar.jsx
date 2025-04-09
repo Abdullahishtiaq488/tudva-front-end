@@ -8,7 +8,7 @@ import TopbarMenuToggler from "@/components/TopNavbar/components/TopbarMenuToggl
 import NotificationDropdown from "@/components/common/NotificationDropdown";
 import { useLayoutContext } from "@/context/useLayoutContext";
 import { Container } from "react-bootstrap";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/context/AuthContext";
 
 const TopNavigationBar = () => {
   const { appMenuControl } = useLayoutContext();

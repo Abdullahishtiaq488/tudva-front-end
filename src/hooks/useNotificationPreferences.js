@@ -1,13 +1,13 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { 
-  getNotificationPreferences, 
-  updateNotificationPreference, 
-  updateMultiplePreferences, 
-  resetNotificationPreferences 
+import {
+  getNotificationPreferences,
+  updateNotificationPreference,
+  updateMultiplePreferences,
+  resetNotificationPreferences
 } from '@/services/notificationPreferenceService';
-import { useAuth } from './useAuth';
+import { useAuth } from '@/context/AuthContext';
 import { toast } from 'react-hot-toast';
 
 export const useNotificationPreferences = () => {
@@ -26,9 +26,9 @@ export const useNotificationPreferences = () => {
     try {
       setIsLoading(true);
       setError(null);
-      
+
       const response = await getNotificationPreferences();
-      
+
       if (response.success) {
         setPreferences(response.preferences);
       } else {
@@ -46,14 +46,14 @@ export const useNotificationPreferences = () => {
   const updatePreference = useCallback(async (preferenceId, enabled) => {
     try {
       setError(null);
-      
+
       const response = await updateNotificationPreference(preferenceId, enabled);
-      
+
       if (response.success) {
-        setPreferences(prev => 
-          prev.map(pref => 
-            pref.id === preferenceId 
-              ? { ...pref, enabled } 
+        setPreferences(prev =>
+          prev.map(pref =>
+            pref.id === preferenceId
+              ? { ...pref, enabled }
               : pref
           )
         );
@@ -76,14 +76,14 @@ export const useNotificationPreferences = () => {
   const updateMultiple = useCallback(async (preferenceIds, enabled) => {
     try {
       setError(null);
-      
+
       const response = await updateMultiplePreferences(preferenceIds, enabled);
-      
+
       if (response.success) {
-        setPreferences(prev => 
-          prev.map(pref => 
-            preferenceIds.includes(pref.id) 
-              ? { ...pref, enabled } 
+        setPreferences(prev =>
+          prev.map(pref =>
+            preferenceIds.includes(pref.id)
+              ? { ...pref, enabled }
               : pref
           )
         );
@@ -106,9 +106,9 @@ export const useNotificationPreferences = () => {
   const resetPreferences = useCallback(async () => {
     try {
       setError(null);
-      
+
       const response = await resetNotificationPreferences();
-      
+
       if (response.success) {
         setPreferences(response.preferences);
         toast.success('Notification preferences reset to default');

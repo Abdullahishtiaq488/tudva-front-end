@@ -10,21 +10,25 @@ const getBackendUrl = () => {
 export async function POST(request) {
   try {
     const body = await request.json();
-    const { userId, courseId, content, rating } = body;
+    const { userId, userName, courseId, content, rating } = body;
 
     // Validate required fields
-    if (!userId || !courseId || !content || !rating) {
+    if (!courseId || !content || !rating) {
       return NextResponse.json({
         error: 'Missing required fields',
         success: false
       }, { status: 400 });
     }
 
-    console.log(`Creating review for course ${courseId} by user ${userId}`);
-    
+    // Use 'anonymous_user' if userId is not provided
+    const actualUserId = userId || 'anonymous_user';
+    const actualUserName = userName || 'Anonymous User';
+
+    console.log(`Creating review for course ${courseId} by user ${actualUserId} (${actualUserName})`);
+
     const response = await axios.post(
       `${getBackendUrl()}/api/file-reviews`,
-      { userId, courseId, content, rating },
+      { userId: actualUserId, userName: actualUserName, courseId, content, rating },
       {
         timeout: 5000 // 5 second timeout
       }

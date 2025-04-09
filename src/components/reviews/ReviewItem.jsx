@@ -103,8 +103,9 @@ const ReviewItem = ({
   // Get user avatar
   const userAvatar = review.user?.profilePicture || defaultAvatar;
 
-  // Get user name
-  const userName = review.user?.fullName || 'Anonymous User';
+  // Get user name with better fallbacks
+  const userName = review.userName || review.user?.fullName || review.user?.name || 'Anonymous User';
+  console.log('Review user data:', { reviewUserId: review.user_id, userName: review.userName, userObj: review.user });
 
   if (isEditing) {
     return (

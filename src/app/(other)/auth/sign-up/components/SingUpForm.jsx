@@ -4,13 +4,12 @@ import React, { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
-import { FaEnvelope, FaLock, FaUser } from 'react-icons/fa'; // Import icons
-import axios from 'axios';
+import { FaEnvelope, FaLock, FaUser } from 'react-icons/fa';
 import { useRouter } from 'next/navigation';
-import IconTextFormInput from '@/components/form/IconTextFormInput'; // Import your component
-import axiosInstance from '@/utils/axiosInstance';
+import IconTextFormInput from '@/components/form/IconTextFormInput';
 import { toast } from "react-hot-toast";
 import ChoicesFormInput from '@/components/form/ChoicesFormInput';
+import { useAuth } from '@/context/AuthContext';
 
 
 
@@ -34,10 +33,9 @@ const registerSchema = yup.object({
 });
 
 const SignUpForm = () => {
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [success, setSuccess] = useState(false);
   const router = useRouter();
+  const { register: registerUser, loading } = useAuth();
 
   const { register, handleSubmit, formState: { errors }, control } = useForm({
     resolver: yupResolver(registerSchema),
@@ -53,34 +51,28 @@ const SignUpForm = () => {
 
   const onSubmit = async (data) => {
     setError(null);
-    setLoading(true);
 
     try {
-      const formData = {
+      const userData = {
         fullName: data.fullName,
         email: data.email,
         password: data.password,
         role: data.role
-      }
+      };
 
-      const response = await axiosInstance.post('/api/user/register', formData);
+      const result = await registerUser(userData);
 
-      if (response.status === 201) {
-        setSuccess(true);
-        toast.success('Registration successful! Please check your email to confirm your account.')
+      if (result.success) {
+        toast.success('Registration successful! Please check your email to confirm your account.');
         router.push('/auth/sign-in');
       } else {
-        setError(response.data.error || 'Registration failed');
+        setError(result.message || 'Registration failed');
+        toast.error(result.message || 'Registration failed');
       }
     } catch (err) {
-      if (axios.isAxiosError(err)) {
-        setError(err.response?.data.error || 'An unexpected error occurred.');
-      } else {
-        setError('An unexpected error occurred.');
-        console.error(err);
-      }
-    } finally {
-      setLoading(false);
+      console.error('Registration error:', err);
+      setError('Registration failed. Please try again.');
+      toast.error('Registration failed. Please try again.');
     }
   };
 
@@ -153,21 +145,21 @@ const SignUpForm = () => {
           )}
 
         />
+      </div>
+      <div className="mb-3">
+        <div className="form-check">
+          <input type="checkbox" className="form-check-input" id="agreement"  {...register('agreement')} />
+          <label className="form-check-label" htmlFor="agreement">By signing up, you agree to the<a href="#"> terms of service</a></label>
+          {errors.agreement && <div className='invalid-feedback d-block' >{errors.agreement.message}</div>}
         </div>
-        <div className="mb-3">
-          <div className="form-check">
-            <input type="checkbox" className="form-check-input" id="agreement"  {...register('agreement')} />
-            <label className="form-check-label" htmlFor="agreement">By signing up, you agree to the<a href="#"> terms of service</a></label>
-            {errors.agreement && <div className='invalid-feedback d-block' >{errors.agreement.message}</div>}
-          </div>
-        </div>
-        <div className="d-grid">
-          <button className="btn btn-primary mb-0" type="submit" disabled={loading}>
-            {loading ? 'Signing Up...' : 'Sign Up'}
-          </button>
-        </div>
-        {error && <div className="alert alert-danger mt-3">{error}</div>}
-        {/* {success && <div className="alert alert-success mt-3">Registration successful! Please check your email.</div>} */}
+      </div>
+      <div className="d-grid">
+        <button className="btn btn-primary mb-0" type="submit" disabled={loading}>
+          {loading ? 'Signing Up...' : 'Sign Up'}
+        </button>
+      </div>
+      {error && <div className="alert alert-danger mt-3">{error}</div>}
+      {/* {success && <div className="alert alert-success mt-3">Registration successful! Please check your email.</div>} */}
     </form>
   );
 };

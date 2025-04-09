@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Row, Col, Card, Spinner, Alert, Button, Nav } from 'react-bootstrap';
 import { getFavorites } from '@/services/favoriteService';
 import CourseCard from '@/app/pages/course/grid/components/CourseCard'; // Adjust import path as needed
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { formatDistanceToNow } from 'date-fns';
 

@@ -13,8 +13,8 @@ import useScrollEvent from "@/hooks/useScrollEvent";
 import useToggle from "@/hooks/useToggle";
 import avatar3 from '@/assets/images/avatar/03.jpg';
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
-import { checkIsLoggedInUser } from "@/helpers/checkLoggedInUser";
+import { useEffect } from "react";
+import { useAuth } from "@/context/AuthContext";
 
 const homePageItems = [
   {
@@ -200,30 +200,8 @@ const TopNavigationBar = () => {
   } = useToggle();
 
   const pathname = usePathname();
-  const [isLoggedInUser, setIsLoggedInUser] = useState(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const { user, isAuthenticated, loading } = useAuth();
   const menuItems = pathname === '/' ? homePageItems : otherPagesMenuItem;
-
-  const getUsersData = async () => {
-    setIsLoading(true)
-    const { user, error } = await checkIsLoggedInUser();
-    console.log(user, 'user')
-    if (error) {
-      setIsLoading(false)
-      setIsLoggedInUser(null)
-    }
-    if (user) {
-      setIsLoading(false)
-      setIsLoggedInUser(user);
-    } else {
-      setIsLoading(false)
-      setIsLoggedInUser(null)
-    }
-  }
-
-  useEffect(() => {
-    getUsersData();
-  }, [])
 
   // Check if we're on the courses page to always show white background
   const isCoursesPage = pathname === '/courses';
@@ -255,16 +233,26 @@ const TopNavigationBar = () => {
             </div>
           </Collapse>
           <ul className="nav flex-row justify-content-center align-items-center list-unstyled ms-xl-auto">
-            <Button size="sm" variant="danger-soft" className="mb-0 !mr-2 px-4">My Learning</Button>
-            <li className="nav-item ms-0 ms-sm-2 d-none d-sm-block">
-              <Link className="btn btn-light btn-round mb-0" href="/shop/wishlist"> <BsHeart className="fa-fw" /></Link>
-            </li>
-            <NotificationDropdown />
-            {isLoggedInUser !== null ?
-              <ProfileDropdown isLoggedInUser={isLoggedInUser} className="nav-item ms-3" />
-              :
+            {isAuthenticated && user && (
+              <Button size="sm" variant="danger-soft" className="mb-0 !mr-2 px-4">My Learning</Button>
+            )}
+            {isAuthenticated && user && (
+              <>
+                <li className="nav-item ms-0 ms-sm-2 d-none d-sm-block">
+                  <Link className="btn btn-light btn-round mb-0" href="/shop/wishlist"> <BsHeart className="fa-fw" /></Link>
+                </li>
+                <NotificationDropdown />
+              </>
+            )}
+            {loading ? (
+              <div className="spinner-border spinner-border-sm text-primary ms-3" role="status">
+                <span className="visually-hidden">Loading...</span>
+              </div>
+            ) : isAuthenticated && user ? (
+              <ProfileDropdown className="nav-item ms-3" />
+            ) : (
               <Button href={'/auth/sign-up'} size="sm" variant="primary" className="mb-0 ms-3 px-4">Join Us</Button>
-            }
+            )}
           </ul>
         </Container>
       </nav>

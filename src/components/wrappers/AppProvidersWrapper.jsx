@@ -5,7 +5,7 @@ import FallbackLoading from '../FallbackLoading';
 import dynamic from 'next/dynamic';
 import Aos from 'aos';
 import { NotificationProvider } from '@/context/useNotificationContext';
-import { AuthProvider } from '@/hooks/useAuth';
+import { AuthProvider } from '@/context/AuthContext';
 const LayoutProvider = dynamic(() => import('@/context/useLayoutContext').then(mod => mod.LayoutProvider), {
   ssr: false
 });

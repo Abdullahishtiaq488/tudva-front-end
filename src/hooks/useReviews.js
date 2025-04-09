@@ -1,5 +1,6 @@
 // front-end/src/hooks/useReviews.js
 import { useState, useEffect, useCallback } from 'react';
+import { useAuth } from '@/context/AuthContext';
 // Import both regular and file-based API methods
 import {
   createReview as createReviewRegular,
@@ -13,6 +14,17 @@ import {
 // Import file-based review API methods
 import axios from 'axios';
 
+// Direct-reviews API methods
+const getReviewsForCourseDirect = async (courseId, page = 1, limit = 10) => {
+  try {
+    const response = await axios.get(`/api/direct-reviews/course/${courseId}?page=${page}&limit=${limit}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error getting reviews from direct-reviews API:', error);
+    throw error;
+  }
+};
+
 // File-based review API methods
 const getReviewsForCourseFile = async (courseId, page = 1, limit = 10) => {
   try {
@@ -24,14 +36,38 @@ const getReviewsForCourseFile = async (courseId, page = 1, limit = 10) => {
   }
 };
 
-const createReviewFile = async (courseId, content, rating, userId = null) => {
+const createReviewDirect = async (courseId, content, rating, userId = null, userName = null) => {
   try {
     // Get user ID from parameter or localStorage
-    const actualUserId = userId || localStorage.getItem('userId') || 'anonymous_user';
+    const actualUserId = userId || 'anonymous_user';
+    const actualUserName = userName || 'Anonymous User';
 
-    console.log('Creating review with file API:', { userId: actualUserId, courseId, content, rating });
+    console.log('Creating review with direct API:', { userId: actualUserId, userName: actualUserName, courseId, content, rating });
+    const response = await axios.post('/api/direct-reviews', {
+      userId: actualUserId,
+      userName: actualUserName,
+      courseId,
+      content,
+      rating
+    });
+    console.log('Direct-reviews API response:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('Error creating review with direct API:', error);
+    throw error;
+  }
+};
+
+const createReviewFile = async (courseId, content, rating, userId = null, userName = null) => {
+  try {
+    // Get user ID from parameter or localStorage
+    const actualUserId = userId || 'anonymous_user';
+    const actualUserName = userName || 'Anonymous User';
+
+    console.log('Creating review with file API:', { userId: actualUserId, userName: actualUserName, courseId, content, rating });
     const response = await axios.post('/api/file-reviews', {
       userId: actualUserId,
+      userName: actualUserName,
       courseId,
       content,
       rating
@@ -46,15 +82,7 @@ const createReviewFile = async (courseId, content, rating, userId = null) => {
 const updateReviewFile = async (reviewId, data) => {
   try {
     // Get user ID from localStorage
-    const userId = localStorage.getItem('userId');
-    if (!userId) {
-      throw new Error('User ID not found');
-    }
-
-    const response = await axios.put(`/api/file-reviews/${reviewId}`, {
-      userId,
-      ...data
-    });
+    const response = await axios.put(`/api/file-reviews/${reviewId}`, data);
     return response.data;
   } catch (error) {
     console.error('Error updating review with file API:', error);
@@ -64,15 +92,7 @@ const updateReviewFile = async (reviewId, data) => {
 
 const deleteReviewFile = async (reviewId) => {
   try {
-    // Get user ID from localStorage
-    const userId = localStorage.getItem('userId');
-    if (!userId) {
-      throw new Error('User ID not found');
-    }
-
-    const response = await axios.delete(`/api/file-reviews/${reviewId}`, {
-      data: { userId }
-    });
+    const response = await axios.delete(`/api/file-reviews/${reviewId}`);
     return response.data;
   } catch (error) {
     console.error('Error deleting review with file API:', error);
@@ -82,15 +102,7 @@ const deleteReviewFile = async (reviewId) => {
 
 const markReviewAsHelpfulFile = async (reviewId) => {
   try {
-    // Get user ID from localStorage
-    const userId = localStorage.getItem('userId');
-    if (!userId) {
-      throw new Error('User ID not found');
-    }
-
-    const response = await axios.post(`/api/file-reviews/${reviewId}/helpful`, {
-      userId
-    });
+    const response = await axios.post(`/api/file-reviews/${reviewId}/helpful`);
     return response.data;
   } catch (error) {
     console.error('Error marking review as helpful with file API:', error);
@@ -100,13 +112,7 @@ const markReviewAsHelpfulFile = async (reviewId) => {
 
 const hasMarkedReviewAsHelpfulFile = async (reviewId) => {
   try {
-    // Get user ID from localStorage
-    const userId = localStorage.getItem('userId');
-    if (!userId) {
-      throw new Error('User ID not found');
-    }
-
-    const response = await axios.get(`/api/file-reviews/${reviewId}/helpful?userId=${userId}`);
+    const response = await axios.get(`/api/file-reviews/${reviewId}/helpful`);
     return response.data;
   } catch (error) {
     console.error('Error checking if review is marked as helpful with file API:', error);
@@ -115,6 +121,7 @@ const hasMarkedReviewAsHelpfulFile = async (reviewId) => {
 };
 
 export const useReviews = (courseId) => {
+  const { user, isAuthenticated } = useAuth();
   const [reviews, setReviews] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -125,7 +132,7 @@ export const useReviews = (courseId) => {
     totalPages: 0
   });
 
-  // Fetch reviews for a course - try file-based API first, then regular API
+  // Fetch reviews for a course - try direct-reviews API first, then file-based API, then regular API
   const fetchReviews = useCallback(async (page = 1, limit = 10) => {
     if (!courseId) {
       console.warn('No courseId provided to fetchReviews');
@@ -138,45 +145,76 @@ export const useReviews = (courseId) => {
 
       console.log(`Fetching reviews for course ${courseId}`);
 
-      // Try file-based API first
+      // Try direct-reviews API first
       try {
-        console.log('Trying file-based API for reviews...');
-        const fileResponse = await getReviewsForCourseFile(courseId, page, limit);
+        console.log('Trying direct-reviews API for reviews...');
+        const directResponse = await getReviewsForCourseDirect(courseId, page, limit);
 
-        if (fileResponse && fileResponse.success && fileResponse.reviews) {
-          console.log('Successfully fetched reviews from file-based API:', fileResponse.reviews);
-          setReviews(fileResponse.reviews);
-          setPagination(fileResponse.pagination || {
+        if (directResponse && directResponse.success && directResponse.reviews) {
+          console.log('Successfully fetched reviews from direct-reviews API:', directResponse.reviews);
+          setReviews(directResponse.reviews);
+          setPagination(directResponse.pagination || {
             page,
             limit,
-            total: fileResponse.reviews.length,
-            totalPages: Math.ceil(fileResponse.reviews.length / limit)
+            total: directResponse.reviews.length,
+            totalPages: Math.ceil(directResponse.reviews.length / limit)
           });
           setIsLoading(false);
           return; // Exit early if successful
         }
-      } catch (fileError) {
-        console.warn('File-based API failed:', fileError.message);
-        // Continue to try regular API
-      }
+      } catch (directError) {
+        console.warn('Direct-reviews API failed for reviews:', directError.message);
 
-      // If file-based API failed, try regular API
-      try {
-        console.log('Trying regular API for reviews...');
-        const response = await getReviewsForCourseRegular(courseId, page, limit);
+        // Try file-based API next
+        try {
+          console.log('Trying file-based API for reviews...');
+          const fileResponse = await getReviewsForCourseFile(courseId, page, limit);
 
-        if (response && response.success && response.reviews) {
-          console.log('Successfully fetched reviews from regular API:', response.reviews);
-          setReviews(response.reviews);
-          setPagination(response.pagination || {
-            page,
-            limit,
-            total: response.reviews.length,
-            totalPages: Math.ceil(response.reviews.length / limit)
-          });
-        } else {
-          // If no reviews found, set empty array
-          console.log('No reviews found for this course');
+          if (fileResponse && fileResponse.success && fileResponse.reviews) {
+            console.log('Successfully fetched reviews from file-based API:', fileResponse.reviews);
+            setReviews(fileResponse.reviews);
+            setPagination(fileResponse.pagination || {
+              page,
+              limit,
+              total: fileResponse.reviews.length,
+              totalPages: Math.ceil(fileResponse.reviews.length / limit)
+            });
+            setIsLoading(false);
+            return; // Exit early if successful
+          }
+        } catch (fileError) {
+          console.warn('File-based API failed for reviews:', fileError.message);
+          // Continue to try regular API
+        }
+
+        // If file-based API failed, try regular API
+        try {
+          console.log('Trying regular API for reviews...');
+          const response = await getReviewsForCourseRegular(courseId, page, limit);
+
+          if (response && response.success && response.reviews) {
+            console.log('Successfully fetched reviews from regular API:', response.reviews);
+            setReviews(response.reviews);
+            setPagination(response.pagination || {
+              page,
+              limit,
+              total: response.reviews.length,
+              totalPages: Math.ceil(response.reviews.length / limit)
+            });
+          } else {
+            // If no reviews found, set empty array
+            console.log('No reviews found for this course');
+            setReviews([]);
+            setPagination({
+              page: 1,
+              limit: 10,
+              total: 0,
+              totalPages: 0
+            });
+          }
+        } catch (regularError) {
+          console.warn('Regular API failed for reviews:', regularError.message);
+          // If all APIs fail, set empty array
           setReviews([]);
           setPagination({
             page: 1,
@@ -185,16 +223,6 @@ export const useReviews = (courseId) => {
             totalPages: 0
           });
         }
-      } catch (regularError) {
-        console.error('Regular API failed:', regularError.message);
-        setError('Could not load reviews. Please try again later.');
-        setReviews([]);
-        setPagination({
-          page: 1,
-          limit: 10,
-          total: 0,
-          totalPages: 0
-        });
       }
     } catch (err) {
       console.error('Error in fetchReviews:', err);
@@ -211,46 +239,66 @@ export const useReviews = (courseId) => {
     }
   }, [courseId]);
 
-  // Submit a new review - try file-based API first, then regular API
+  // Submit a new review - try direct-reviews API first, then file-based API, then regular API
   const submitReview = useCallback(async (reviewData) => {
     try {
       setIsLoading(true);
       setError(null);
 
+      // Check if user is authenticated
+      if (!isAuthenticated || !user) {
+        setError('You must be logged in to submit a review');
+        return { success: false, error: 'You must be logged in to submit a review' };
+      }
+
       let response;
       let success = false;
 
-      // Get user ID from reviewData or localStorage
-      const userId = reviewData.userId || localStorage.getItem('userId') || 'anonymous_user';
-      console.log('Using user ID for review submission:', userId);
+      // Get user ID and name from auth context
+      const userId = user.id;
+      const userName = user.fullName || user.name;
+      console.log('Using authenticated user for review submission:', { userId, userName });
 
-      // Try file-based API first
+      // Try direct-reviews API first
       try {
-        console.log('Trying file-based API for submitting review...');
-        response = await createReviewFile(courseId, reviewData.content, reviewData.rating, userId);
+        console.log('Trying direct-reviews API for submitting review...');
+        response = await createReviewDirect(courseId, reviewData.content, reviewData.rating, userId, userName);
         if (response.success) {
-          console.log('Successfully submitted review with file-based API');
+          console.log('Successfully submitted review with direct-reviews API');
           success = true;
         }
-      } catch (fileError) {
-        console.warn('File-based API failed for submit:', fileError.message);
+      } catch (directError) {
+        console.warn('Direct-reviews API failed for submit:', directError.message);
 
-        // If file-based API fails, try regular API
+        // If direct-reviews API fails, try file-based API
         try {
-          console.log('Trying regular API for submitting review...');
-          response = await createReviewRegular({
-            ...reviewData,
-            course_id: courseId,
-            userId: userId // Include userId in the request
-          });
+          console.log('Trying file-based API for submitting review...');
+          response = await createReviewFile(courseId, reviewData.content, reviewData.rating, userId, userName);
           if (response.success) {
-            console.log('Successfully submitted review with regular API');
+            console.log('Successfully submitted review with file-based API');
             success = true;
           }
-        } catch (regularError) {
-          console.warn('Regular API failed for submit:', regularError.message);
-          // If both fail, throw the file error as it's likely more relevant
-          throw fileError;
+        } catch (fileError) {
+          console.warn('File-based API failed for submit:', fileError.message);
+
+          // If file-based API fails, try regular API
+          try {
+            console.log('Trying regular API for submitting review...');
+            response = await createReviewRegular({
+              ...reviewData,
+              course_id: courseId,
+              userId: userId, // Include userId in the request
+              userName: userName // Include userName in the request
+            });
+            if (response.success) {
+              console.log('Successfully submitted review with regular API');
+              success = true;
+            }
+          } catch (regularError) {
+            console.warn('Regular API failed for submit:', regularError.message);
+            // If all APIs fail, throw the direct error as it's likely more relevant
+            throw directError;
+          }
         }
       }
 
@@ -263,117 +311,209 @@ export const useReviews = (courseId) => {
         return { success: false, error: response?.error };
       }
     } catch (err) {
-      setError(err.message || 'Error submitting review');
       console.error('Error submitting review:', err);
-      return { success: false, error: err.message || 'Error submitting review' };
+      setError(err.message || 'Failed to submit review');
+      return { success: false, error: err.message };
     } finally {
       setIsLoading(false);
     }
-  }, [courseId, fetchReviews, pagination.page, pagination.limit]);
+  }, [courseId, user, isAuthenticated, pagination.page, pagination.limit, fetchReviews]);
 
-  // Update an existing review
-  const updateUserReview = useCallback(async (reviewId, reviewData) => {
+  // Update a review - try file-based API first, then regular API
+  const updateReview = useCallback(async (reviewId, data) => {
     try {
       setIsLoading(true);
       setError(null);
 
-      const response = await updateReview(reviewId, reviewData);
+      let response;
+      let success = false;
 
-      if (response.success) {
+      // Try file-based API first
+      try {
+        console.log('Trying file-based API for updating review...');
+        response = await updateReviewFile(reviewId, data);
+        if (response.success) {
+          console.log('Successfully updated review with file-based API');
+          success = true;
+        }
+      } catch (fileError) {
+        console.warn('File-based API failed for update:', fileError.message);
+
+        // If file-based API fails, try regular API
+        try {
+          console.log('Trying regular API for updating review...');
+          response = await updateReviewRegular(reviewId, data);
+          if (response.success) {
+            console.log('Successfully updated review with regular API');
+            success = true;
+          }
+        } catch (regularError) {
+          console.warn('Regular API failed for update:', regularError.message);
+          // If both fail, throw the file error as it's likely more relevant
+          throw fileError;
+        }
+      }
+
+      if (success && response.success) {
         // Refresh reviews after update
         await fetchReviews(pagination.page, pagination.limit);
         return { success: true, review: response.review };
       } else {
-        setError(response.error || 'Failed to update review');
-        return { success: false, error: response.error };
+        setError(response?.error || 'Failed to update review');
+        return { success: false, error: response?.error };
       }
     } catch (err) {
-      setError(err.message || 'Error updating review');
       console.error('Error updating review:', err);
-      return { success: false, error: err.message || 'Error updating review' };
+      setError(err.message || 'Failed to update review');
+      return { success: false, error: err.message };
     } finally {
       setIsLoading(false);
     }
-  }, [fetchReviews, pagination.page, pagination.limit]);
+  }, [pagination.page, pagination.limit, fetchReviews]);
 
-  // Delete a review
-  const deleteUserReview = useCallback(async (reviewId) => {
+  // Delete a review - try file-based API first, then regular API
+  const deleteReview = useCallback(async (reviewId) => {
     try {
       setIsLoading(true);
       setError(null);
 
-      const response = await deleteReview(reviewId);
+      let response;
+      let success = false;
 
-      if (response.success) {
+      // Try file-based API first
+      try {
+        console.log('Trying file-based API for deleting review...');
+        response = await deleteReviewFile(reviewId);
+        if (response.success) {
+          console.log('Successfully deleted review with file-based API');
+          success = true;
+        }
+      } catch (fileError) {
+        console.warn('File-based API failed for delete:', fileError.message);
+        // If file-based API fails, show error but don't throw
+        setError('Failed to delete review: ' + fileError.message);
+        return { success: false, error: fileError.message };
+      }
+
+      if (success && response.success) {
         // Refresh reviews after deletion
         await fetchReviews(pagination.page, pagination.limit);
         return { success: true };
       } else {
-        setError(response.error || 'Failed to delete review');
-        return { success: false, error: response.error };
+        setError(response?.error || 'Failed to delete review');
+        return { success: false, error: response?.error };
       }
     } catch (err) {
-      setError(err.message || 'Error deleting review');
       console.error('Error deleting review:', err);
-      return { success: false, error: err.message || 'Error deleting review' };
+      setError(err.message || 'Failed to delete review');
+      return { success: false, error: err.message };
     } finally {
       setIsLoading(false);
     }
-  }, [fetchReviews, pagination.page, pagination.limit]);
+  }, [pagination.page, pagination.limit, fetchReviews]);
 
-  // Mark a review as helpful
-  const markAsHelpful = useCallback(async (reviewId) => {
+  // Mark a review as helpful - try file-based API first, then regular API
+  const markReviewAsHelpful = useCallback(async (reviewId) => {
     try {
-      setIsLoading(true);
       setError(null);
 
-      const response = await markReviewAsHelpful(reviewId);
+      let response;
+      let success = false;
 
-      if (response.success) {
-        // Update the review in the local state
-        setReviews(prev =>
-          prev.map(review =>
-            review.id === reviewId
-              ? { ...review, helpfulCount: response.helpfulCount }
-              : review
-          )
-        );
-        return { success: true, helpfulCount: response.helpfulCount };
+      // Try file-based API first
+      try {
+        console.log('Trying file-based API for marking review as helpful...');
+        response = await markReviewAsHelpfulFile(reviewId);
+        if (response.success) {
+          console.log('Successfully marked review as helpful with file-based API');
+          success = true;
+        }
+      } catch (fileError) {
+        console.warn('File-based API failed for marking as helpful:', fileError.message);
+
+        // If file-based API fails, try regular API
+        try {
+          console.log('Trying regular API for marking review as helpful...');
+          response = await markReviewAsHelpfulRegular(reviewId);
+          if (response.success) {
+            console.log('Successfully marked review as helpful with regular API');
+            success = true;
+          }
+        } catch (regularError) {
+          console.warn('Regular API failed for marking as helpful:', regularError.message);
+          // If both fail, throw the file error as it's likely more relevant
+          throw fileError;
+        }
+      }
+
+      if (success && response.success) {
+        // Refresh reviews after marking as helpful
+        await fetchReviews(pagination.page, pagination.limit);
+        return { success: true };
       } else {
-        setError(response.error || 'Failed to mark review as helpful');
-        return { success: false, error: response.error };
+        setError(response?.error || 'Failed to mark review as helpful');
+        return { success: false, error: response?.error };
       }
     } catch (err) {
-      setError(err.message || 'Error marking review as helpful');
       console.error('Error marking review as helpful:', err);
-      return { success: false, error: err.message || 'Error marking review as helpful' };
-    } finally {
-      setIsLoading(false);
+      setError(err.message || 'Failed to mark review as helpful');
+      return { success: false, error: err.message };
     }
-  }, []);
+  }, [pagination.page, pagination.limit, fetchReviews]);
 
-  // Check if a user has marked a review as helpful
-  const checkIfMarkedAsHelpful = useCallback(async (reviewId) => {
+  // Check if user has marked a review as helpful - try file-based API first, then regular API
+  const hasMarkedReviewAsHelpful = useCallback(async (reviewId) => {
     try {
-      const response = await hasMarkedReviewAsHelpful(reviewId);
-      return response;
+      setError(null);
+
+      let response;
+      let success = false;
+
+      // Try file-based API first
+      try {
+        console.log('Trying file-based API for checking if review is marked as helpful...');
+        response = await hasMarkedReviewAsHelpfulFile(reviewId);
+        if (response.success) {
+          console.log('Successfully checked if review is marked as helpful with file-based API');
+          success = true;
+        }
+      } catch (fileError) {
+        console.warn('File-based API failed for checking if marked as helpful:', fileError.message);
+
+        // If file-based API fails, try regular API
+        try {
+          console.log('Trying regular API for checking if review is marked as helpful...');
+          response = await hasMarkedReviewAsHelpfulRegular(reviewId);
+          if (response.success) {
+            console.log('Successfully checked if review is marked as helpful with regular API');
+            success = true;
+          }
+        } catch (regularError) {
+          console.warn('Regular API failed for checking if marked as helpful:', regularError.message);
+          // If both fail, throw the file error as it's likely more relevant
+          throw fileError;
+        }
+      }
+
+      if (success && response.success) {
+        return { success: true, hasMarked: response.hasMarked };
+      } else {
+        setError(response?.error || 'Failed to check if review is marked as helpful');
+        return { success: false, error: response?.error };
+      }
     } catch (err) {
       console.error('Error checking if review is marked as helpful:', err);
-      return { success: false, hasMarked: false };
+      setError(err.message || 'Failed to check if review is marked as helpful');
+      return { success: false, error: err.message };
     }
   }, []);
 
-  // Change page
-  const changePage = useCallback((newPage) => {
-    if (newPage >= 1 && newPage <= pagination.totalPages) {
-      fetchReviews(newPage, pagination.limit);
-    }
-  }, [fetchReviews, pagination.totalPages, pagination.limit]);
-
-  // Initial fetch
+  // Fetch reviews on mount and when courseId changes
   useEffect(() => {
-    fetchReviews(1, 10);
-  }, [fetchReviews]);
+    if (courseId) {
+      fetchReviews();
+    }
+  }, [courseId, fetchReviews]);
 
   return {
     reviews,
@@ -382,10 +522,9 @@ export const useReviews = (courseId) => {
     pagination,
     fetchReviews,
     submitReview,
-    updateUserReview,
-    deleteUserReview,
-    markAsHelpful,
-    checkIfMarkedAsHelpful,
-    changePage
+    updateReview,
+    deleteReview,
+    markReviewAsHelpful,
+    hasMarkedReviewAsHelpful
   };
 };

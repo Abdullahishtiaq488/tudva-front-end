@@ -6,7 +6,7 @@ import { FaHeart, FaRegHeart } from 'react-icons/fa';
 import { toast } from 'react-hot-toast';
 import { addToFavorites, removeFromFavorites, checkIsFavorite } from '@/services/favoriteService';
 import { addToWishlist, removeFromWishlist, isInWishlist } from '@/utils/fileWishlistApi';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 
 /**

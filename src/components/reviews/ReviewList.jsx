@@ -6,7 +6,7 @@ import ReviewItem from './ReviewItem';
 import ReviewForm from './ReviewForm';
 import ReviewStats from './ReviewStats';
 import { useReviews } from '@/hooks/useReviews';
-import { useAuth } from '@/hooks/useAuth'; // Assuming you have an auth hook
+import { useAuth } from '@/context/AuthContext';
 
 const ReviewList = ({ courseId }) => {
   const { user } = useAuth();

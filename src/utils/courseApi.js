@@ -1,9 +1,9 @@
 import axios from 'axios';
+import authService from '@/services/authService';
 
 // Helper function to get auth token
 const getAuthHeader = () => {
-  const token = localStorage.getItem('auth_token');
-  return token ? { Authorization: `Bearer ${token}` } : {};
+  return authService.getAuthHeader();
 };
 
 // Create a course
@@ -25,7 +25,7 @@ export const createCourse = async (courseData) => {
 export const getAllCourses = async (params = {}) => {
   try {
     const queryParams = new URLSearchParams();
-    
+
     // Add any provided parameters
     Object.entries(params).forEach(([key, value]) => {
       if (value !== undefined && value !== null) {
