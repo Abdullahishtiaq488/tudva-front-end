@@ -5,6 +5,7 @@ import FallbackLoading from '../FallbackLoading';
 import dynamic from 'next/dynamic';
 import Aos from 'aos';
 import { NotificationProvider } from '@/context/useNotificationContext';
+import { AuthProvider } from '@/hooks/useAuth';
 const LayoutProvider = dynamic(() => import('@/context/useLayoutContext').then(mod => mod.LayoutProvider), {
   ssr: false
 });
@@ -42,11 +43,14 @@ const AppProvidersWrapper = ({
 
     return () => clearTimeout(timer);
   }, []);
-  return <LayoutProvider>
-
-    <NotificationProvider>
-      <Suspense fallback={<FallbackLoading />}>{children}</Suspense>
-    </NotificationProvider>
-  </LayoutProvider>;
+  return (
+    <LayoutProvider>
+      <AuthProvider>
+        <NotificationProvider>
+          <Suspense fallback={<FallbackLoading />}>{children}</Suspense>
+        </NotificationProvider>
+      </AuthProvider>
+    </LayoutProvider>
+  );
 };
 export default AppProvidersWrapper;

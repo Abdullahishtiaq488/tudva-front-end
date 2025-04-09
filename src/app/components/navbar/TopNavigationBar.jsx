@@ -4,8 +4,9 @@ import clsx from "clsx";
 import Image from "next/image";
 import Link from "next/link";
 import { Button, Card, CardBody, CardFooter, CardHeader, Col, Collapse, Container, Dropdown, DropdownItem, DropdownMenu, DropdownToggle, NavItem } from "react-bootstrap";
-import { BsBell, BsGridFill, BsHeart } from "react-icons/bs";
+import { BsGridFill, BsHeart } from "react-icons/bs";
 import { FaChevronDown, FaSearch } from "react-icons/fa";
+import NotificationDropdown from "@/components/common/NotificationDropdown";
 import LogoBox from "@/components/LogoBox";
 import ProfileDropdown from "@/components/TopNavbar/components/ProfileDropdown";
 import useScrollEvent from "@/hooks/useScrollEvent";
@@ -184,43 +185,7 @@ const otherPagesMenuItem = [
   },
 ]
 
-const NotificationDropdown = () => {
-  return <Dropdown className="nav-item ms-2 ms-sm-3">
-    <DropdownToggle className="btn btn-light btn-round arrow-none mb-0" as='a' role="button" data-bs-toggle="dropdown" aria-expanded="false" data-bs-auto-close="outside">
-      <BsBell className="fa-fw" />
-    </DropdownToggle>
-    <span className="notif-badge animation-blink" />
-    <DropdownMenu className="dropdown-animation dropdown-menu-end dropdown-menu-size-md p-0 shadow-lg border-0">
-      <Card className="bg-transparent">
-        <CardHeader className="bg-transparent border-bottom py-4 d-flex justify-content-between align-items-center">
-          <h6 className="m-0">Notifications <span className="badge bg-danger bg-opacity-10 text-danger ms-2">2 new</span></h6>
-          <a className="small" href="#">Clear all</a>
-        </CardHeader>
-        <CardBody className="p-0">
-          <ul className="list-group list-unstyled list-group-flush">
-            <li>
-              <a href="#" className="list-group-item-action border-0 border-bottom d-flex p-3">
-                <div className="me-3">
-                  <div className="avatar avatar-md">
-                    <Image className="avatar-img rounded-circle" src={avatar3} alt="avatar" />
-                  </div>
-                </div>
-                <div>
-                  <h6 className="mb-1">Update v2.3 completed successfully</h6>
-                  <p className="small text-body m-0">What&apos;s new! Find out about new features</p>
-                  <small className="text-body">5 min ago</small>
-                </div>
-              </a>
-            </li>
-          </ul>
-        </CardBody>
-        <CardFooter className="bg-transparent border-0 py-3 text-center position-relative">
-          <Link href="" className="stretched-link">See all incoming activity</Link>
-        </CardFooter>
-      </Card>
-    </DropdownMenu>
-  </Dropdown>;
-};
+
 const TopNavigationBar = () => {
   const {
     scrollY
@@ -260,8 +225,11 @@ const TopNavigationBar = () => {
     getUsersData();
   }, [])
 
+  // Check if we're on the courses page to always show white background
+  const isCoursesPage = pathname === '/courses';
+
   return <>
-    <header className={clsx("navbar-light navbar-sticky", { 'navbar-sticky-on': scrollY >= 400 })}>
+    <header className={clsx("navbar-light navbar-sticky", { 'navbar-sticky-on': scrollY >= 400 || isCoursesPage })}>
       <nav className="navbar navbar-expand-xl z-index-9">
         <Container>
           <LogoBox height={36} width={170} />

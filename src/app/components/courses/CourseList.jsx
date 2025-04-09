@@ -6,49 +6,87 @@ import Pagination from "./Pagination";
 import CourseCard from "./CourseCard";
 import { useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import { getAllCourses } from "@/utils/courseSync";
+import { getAllSimpleCourses } from "@/utils/simpleCourseApi";
+import { getAllDirectCourses } from "@/utils/directCourseApi";
+import { getAllFileCourses } from "@/utils/fileCourseApi";
 
 const fetchCourses = async (search, category, sortBy, page) => {
   try {
-    // Get courses from localStorage
-    const coursesStr = localStorage.getItem('courses');
-    let courses = coursesStr ? JSON.parse(coursesStr) : [];
+    // First, try to get courses from the backend using the file-based API
+    let allCourses = [];
+    try {
+      allCourses = await getAllFileCourses();
+      console.log('Courses from file-based API:', allCourses);
 
-    // Filter by search term
+      if (allCourses && allCourses.length > 0) {
+        // If we got courses from the file-based API, use them
+        console.log('Using courses from file-based API');
+      } else {
+        // If no courses from file-based API, try direct API
+        console.log('No courses from file-based API, trying direct API');
+        allCourses = await getAllDirectCourses();
+        console.log('Courses from direct API:', allCourses);
+
+        if (allCourses && allCourses.length > 0) {
+          // If we got courses from the direct API, use them
+          console.log('Using courses from direct API');
+        } else {
+          // If no courses from direct API, try simplified API
+          console.log('No courses from direct API, trying simplified API');
+          allCourses = await getAllSimpleCourses();
+          console.log('Courses from simplified API:', allCourses);
+        }
+      }
+    } catch (apiError) {
+      console.warn('Error fetching from APIs, falling back to localStorage:', apiError);
+      // Fall back to localStorage if APIs fail
+      allCourses = await getAllCourses();
+      console.log('Courses from localStorage:', allCourses);
+    }
+
+    // Filter courses based on search and category
+    let filteredCourses = allCourses;
+
+    // Apply search filter if provided
     if (search) {
       const searchLower = search.toLowerCase();
-      courses = courses.filter(course =>
+      filteredCourses = filteredCourses.filter(course =>
         (course.title && course.title.toLowerCase().includes(searchLower)) ||
         (course.description && course.description.toLowerCase().includes(searchLower)) ||
-        (course.shortDesription && course.shortDesription.toLowerCase().includes(searchLower))
+        (course.short_description && course.short_description.toLowerCase().includes(searchLower))
       );
     }
 
-    // Filter by category
+    // Apply category filter if provided
     if (category && category !== 'All') {
-      courses = courses.filter(course => course.category === category);
+      filteredCourses = filteredCourses.filter(course =>
+        course.category === category
+      );
     }
 
-    // Sort courses
+    // Apply client-side sorting if needed
     if (sortBy) {
       if (sortBy === 'free') {
-        courses = courses.filter(course => course.price === 0 || !course.price);
+        filteredCourses = filteredCourses.filter(course => course.price === 0 || !course.price);
       } else if (sortBy === 'most-viewed') {
         // Sort by views (if available)
-        courses.sort((a, b) => (b.views || 0) - (a.views || 0));
+        filteredCourses.sort((a, b) => (b.views || 0) - (a.views || 0));
       } else if (sortBy === 'popular') {
         // Sort by popularity (if available)
-        courses.sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
+        filteredCourses.sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
       }
     }
 
-    // Pagination
-    const limit = 10;
-    const totalPages = Math.ceil(courses.length / limit);
-    const startIndex = (page - 1) * limit;
-    const endIndex = startIndex + limit;
-    const paginatedCourses = courses.slice(startIndex, endIndex);
+    // Apply pagination
+    const pageSize = 10;
+    const startIndex = (page - 1) * pageSize;
+    const paginatedCourses = filteredCourses.slice(startIndex, startIndex + pageSize);
 
-    return { courses: paginatedCourses, totalPages };
+    return {
+      courses: paginatedCourses,
+      totalPages: Math.ceil(filteredCourses.length / pageSize) || 1
+    };
   } catch (error) {
     console.error("Error fetching courses:", error);
     return { courses: [], totalPages: 1 };

@@ -94,27 +94,43 @@
 
 // export default AddTopic;
 
-import React from "react";
+import React, { useState } from "react";
 import { Button, Modal, Form } from "react-bootstrap";
 import { BsPlusCircle, BsXLg } from "react-icons/bs";
 import { useForm } from "react-hook-form";
+import VideoUpload from "@/components/VideoUpload";
+import { toast } from "react-hot-toast";
 
 const AddTopic = ({ show, onHide, onDataSubmit }) => {
-  const { register, handleSubmit, formState: { errors }, reset } = useForm();
+  const { register, handleSubmit, formState: { errors }, reset, setValue } = useForm();
+  const [videoData, setVideoData] = useState(null);
+  const [showVideoUpload, setShowVideoUpload] = useState(true);
+
+  const handleVideoUploadComplete = (data) => {
+    setVideoData(data);
+    setShowVideoUpload(false);
+    toast.success('Video ready for submission');
+  };
 
   const onSubmit = (data) => {
-    // Ensure file is correctly captured
-    const videoFile = data.videoFile[0]; // Get the actual File object
+    if (!videoData) {
+      toast.error('Please upload a video first');
+      return;
+    }
 
     // Pass the data (including videoFile) to Step3.jsx
     onDataSubmit({
       topicName: data.topicName,
       description: data.description,
-      videoFile: videoFile, // Directly pass the File object
+      videoFile: videoData.file, // Directly pass the File object
+      videoUrl: videoData.url, // Pass the URL for preview
     });
 
-    reset(); // Clear form after submission
-    onHide(); // Close modal
+    // Reset form and state
+    reset();
+    setVideoData(null);
+    setShowVideoUpload(true);
+    onHide();
   };
 
   return (
@@ -132,8 +148,8 @@ const AddTopic = ({ show, onHide, onDataSubmit }) => {
             <Form.Control
               type="text"
               placeholder="Enter topic name"
-              {...register("topicName", { 
-                required: "Topic name is required" 
+              {...register("topicName", {
+                required: "Topic name is required"
               })}
             />
             {errors.topicName && <span className="text-danger">{errors.topicName.message}</span>}
@@ -141,26 +157,42 @@ const AddTopic = ({ show, onHide, onDataSubmit }) => {
 
           <Form.Group className="mb-3">
             <Form.Label>Video <span className="text-danger">*</span></Form.Label>
-            <Form.Control
-              type="file"
-              accept="video/mp4,video/avi,video/quicktime"
-              {...register("videoFile", { 
-                required: "Video file is required",
-                validate: {
-                  fileSize: (files) => {
-                    const file = files[0];
-                    const maxSize = 100 * 1024 * 1024; // 100 MB
-                    return file.size <= maxSize || "File size must be less than 100 MB";
-                  },
-                  fileType: (files) => {
-                    const file = files[0];
-                    const allowedTypes = ['video/mp4', 'video/avi', 'video/quicktime'];
-                    return allowedTypes.includes(file.type) || "Only MP4, AVI, and QuickTime videos are allowed";
-                  }
-                }
-              })}
-            />
-            {errors.videoFile && <span className="text-danger">{errors.videoFile.message}</span>}
+            {showVideoUpload ? (
+              <VideoUpload
+                onUploadComplete={handleVideoUploadComplete}
+                maxSizeMB={100}
+                buttonText="Upload Lecture Video"
+              />
+            ) : (
+              <div className="mb-3">
+                <div className="d-flex align-items-center justify-content-between">
+                  <span className="text-success">✓ Video uploaded successfully</span>
+                  <Button
+                    variant="outline-secondary"
+                    size="sm"
+                    onClick={() => {
+                      setVideoData(null);
+                      setShowVideoUpload(true);
+                    }}
+                  >
+                    Change Video
+                  </Button>
+                </div>
+                {videoData?.previewUrl && (
+                  <div className="mt-2">
+                    <video
+                      width="100%"
+                      height="auto"
+                      controls
+                      className="rounded mt-2"
+                    >
+                      <source src={videoData.previewUrl} type="video/mp4" />
+                      Your browser does not support the video tag.
+                    </video>
+                  </div>
+                )}
+              </div>
+            )}
           </Form.Group>
 
           <Form.Group className="mb-3">

@@ -140,7 +140,7 @@ const CourseDetails = ({ course }) => {
                     <Instructor />
                   </TabPane>
                   <TabPane eventKey="reviews" className="fade" role="tabpanel">
-                    <Reviews />
+                    <Reviews courseId={course?.id} />
                   </TabPane>
                   <TabPane eventKey="faqs" className="fade" role="tabpanel">
                     <Faqs />

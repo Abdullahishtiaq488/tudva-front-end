@@ -10,14 +10,35 @@ import { FaBaseballBall, FaHeart, FaNode, FaNodeJs, FaPython, FaRegClock, FaRegH
 import * as FaIcons from "react-icons/fa";
 
 const DynamicIcon = ({ iconName }) => {
-  // Check if the iconName is a custom icon (contains a file extension)
-  if (iconName && (iconName.includes('.png') || iconName.includes('.jpg') || iconName.includes('.svg'))) {
+  // Check if the iconName is a full URL (from cloud storage)
+  if (iconName && (iconName.includes('storage.googleapis.com') || iconName.includes('supabase.co'))) {
     return (
       <img
-        src={`/assets/all icons 96px/${iconName}`}
+        src={iconName}
         alt="Course Icon"
         className="w-25"
         style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
+      />
+    );
+  }
+
+  // Check if the iconName is a custom icon (contains a file extension)
+  if (iconName && (iconName.includes('.png') || iconName.includes('.jpg') || iconName.includes('.svg'))) {
+    // Fix the path by removing spaces and ensuring correct format
+    const fixedPath = `/assets/all%20icons%2096px/${iconName}`;
+    console.log('Using icon path:', fixedPath);
+
+    return (
+      <img
+        src={fixedPath}
+        alt="Course Icon"
+        className="w-25"
+        style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
+        onError={(e) => {
+          console.error('Failed to load icon:', fixedPath);
+          e.target.onerror = null;
+          e.target.src = '/assets/images/courses/4by3/01.jpg'; // Fallback image
+        }}
       />
     );
   }

@@ -62,7 +62,11 @@ const SignIn = () => {
 
           // Store the token in localStorage
           if (directResponse.data.token) {
-            localStorage.setItem('token', directResponse.data.token);
+            const token = directResponse.data.token;
+            // Make sure the token is properly formatted for API requests
+            const formattedToken = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
+            localStorage.setItem('token', formattedToken);
+            console.log('Stored token:', formattedToken);
           }
 
           // Create a minimal user profile

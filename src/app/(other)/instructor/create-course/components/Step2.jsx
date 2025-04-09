@@ -73,8 +73,22 @@ const Step2 = ({ goToNextStep, goBackToPreviousStep }) => {
   };
 
   const handleIconSelect = (iconName) => {
+    console.log('Selected icon:', iconName);
     setSelectedIcon(iconName);
     setValue('icon', iconName); // Update form value with the icon name
+
+    // Update the current course in localStorage
+    const currentCourseStr = localStorage.getItem('current_course');
+    if (currentCourseStr) {
+      const currentCourse = JSON.parse(currentCourseStr);
+      const updatedCourse = {
+        ...currentCourse,
+        icon: iconName,
+        updatedAt: new Date().toISOString()
+      };
+      localStorage.setItem('current_course', JSON.stringify(updatedCourse));
+      console.log('Updated current course with icon:', updatedCourse);
+    }
   };
 
   const handleNext = async () => {
@@ -100,6 +114,10 @@ const Step2 = ({ goToNextStep, goBackToPreviousStep }) => {
         // Parse the current course
         const currentCourse = JSON.parse(currentCourseStr);
 
+        // Log the current values for debugging
+        console.log('Current form values:', { color, icon });
+        console.log('Current course before update:', currentCourse);
+
         // Update the course with color and icon
         const updatedCourse = {
           ...currentCourse,
@@ -107,6 +125,8 @@ const Step2 = ({ goToNextStep, goBackToPreviousStep }) => {
           icon,
           updatedAt: new Date().toISOString()
         };
+
+        console.log('Updated course with color and icon:', updatedCourse);
 
         // Save the updated course back to localStorage
         localStorage.setItem('current_course', JSON.stringify(updatedCourse));

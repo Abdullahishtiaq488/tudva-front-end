@@ -7,6 +7,9 @@ import { useParams } from "next/navigation";
 import { useState, useEffect } from "react";
 import { checkIsLoggedInUser } from "@/helpers/checkLoggedInUser";
 import axiosInstance from "@/utils/axiosInstance";
+import { getAllFileCourses } from "@/utils/fileCourseApi";
+import { getAllDirectCourses } from "@/utils/directCourseApi";
+import { getAllSimpleCourses } from "@/utils/simpleCourseApi";
 
 const DetailMinimal = () => {
   const params = useParams();
@@ -24,16 +27,40 @@ const DetailMinimal = () => {
       try {
         setIsLoading(true);
 
-        // Get courses from localStorage
-        const coursesStr = localStorage.getItem('courses');
-        if (!coursesStr) {
-          console.error('No courses found in localStorage');
-          setIsLoading(false);
-          return;
-        }
+        // Try to get courses from file-based API first
+        let courses = [];
+        let course = null;
 
-        const courses = JSON.parse(coursesStr);
-        const course = courses.find(c => c.id === courseId);
+        try {
+          // Try file-based API first
+          courses = await getAllFileCourses();
+          console.log('Courses from file-based API:', courses);
+          course = courses.find(c => c.id === courseId);
+
+          if (!course) {
+            // If course not found, try direct API
+            console.log('Course not found in file-based API, trying direct API');
+            courses = await getAllDirectCourses();
+            console.log('Courses from direct API:', courses);
+            course = courses.find(c => c.id === courseId);
+
+            if (!course) {
+              // If still not found, try simplified API
+              console.log('Course not found in direct API, trying simplified API');
+              courses = await getAllSimpleCourses();
+              console.log('Courses from simplified API:', courses);
+              course = courses.find(c => c.id === courseId);
+            }
+          }
+        } catch (apiError) {
+          console.warn('Error fetching from APIs, falling back to localStorage:', apiError);
+          // Fall back to localStorage if APIs fail
+          const coursesStr = localStorage.getItem('courses');
+          if (coursesStr) {
+            courses = JSON.parse(coursesStr);
+            course = courses.find(c => c.id === courseId);
+          }
+        }
 
         if (!course) {
           console.error(`Course with ID ${courseId} not found`);

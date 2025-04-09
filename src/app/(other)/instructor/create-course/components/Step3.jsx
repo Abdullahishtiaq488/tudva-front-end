@@ -78,7 +78,7 @@ const Step3 = ({ goToNextStep, goBackToPreviousStep }) => {
   };
 
   const handleTopicDataSubmit = (data) => {
-    const { topicName, description, videoFile } = data;
+    const { topicName, description, videoFile, videoUrl } = data;
 
     const currentGroups = getValues("lectureGroups");
     const updatedGroups = [...currentGroups];
@@ -86,15 +86,62 @@ const Step3 = ({ goToNextStep, goBackToPreviousStep }) => {
       updatedGroups[currentGroupIndex].lectures = [];
     }
 
-    updatedGroups[currentGroupIndex].lectures.push({
+    // Generate a unique ID for the lecture
+    const lectureId = `lecture_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+
+    // Create the lecture object
+    const newLecture = {
+      id: lectureId,
       topicName,
       description,
       videoFile, // Store the File object for backend upload
+      videoUrl, // Store the URL for preview
       moduleName: updatedGroups[currentGroupIndex].lectureHeading, // Explicitly add moduleName here
-    });
+      sortOrder: updatedGroups[currentGroupIndex].lectures.length
+    };
 
+    // Add the lecture to the group
+    updatedGroups[currentGroupIndex].lectures.push(newLecture);
+
+    // Update the form value
     setValue("lectureGroups", updatedGroups);
+
+    // Update the current course in localStorage
+    const currentCourseStr = localStorage.getItem('current_course');
+    if (currentCourseStr) {
+      const currentCourse = JSON.parse(currentCourseStr);
+
+      // Get all lectures from all groups
+      const allLectures = [];
+      updatedGroups.forEach(group => {
+        if (group.lectures && group.lectures.length > 0) {
+          group.lectures.forEach(lecture => {
+            allLectures.push({
+              id: lecture.id,
+              moduleName: lecture.moduleName,
+              topicName: lecture.topicName,
+              description: lecture.description,
+              videoUrl: lecture.videoUrl,
+              sortOrder: lecture.sortOrder
+            });
+          });
+        }
+      });
+
+      // Update the course with the lectures
+      const updatedCourse = {
+        ...currentCourse,
+        lectures: allLectures,
+        updatedAt: new Date().toISOString()
+      };
+
+      // Save the updated course back to localStorage
+      localStorage.setItem('current_course', JSON.stringify(updatedCourse));
+      console.log('Updated current course with lectures:', updatedCourse);
+    }
+
     setShowAddTopicModal(false);
+    toast.success(`Lecture "${topicName}" added to ${updatedGroups[currentGroupIndex].lectureHeading}`);
   };
 
   const handleNext = async () => {
@@ -139,23 +186,34 @@ const Step3 = ({ goToNextStep, goBackToPreviousStep }) => {
         // Parse the current course
         const currentCourse = JSON.parse(currentCourseStr);
 
+        console.log('Current course before processing lectures:', currentCourse);
+        console.log('Lecture groups from form:', lectureGroups);
+
         // Process lectures data
         const processedLectures = [];
 
         // For each lecture, create a data object
         lectureGroups.forEach((group) => {
-          group.lectures.forEach((lecture, lectureIndex) => {
-            const lectureData = {
-              moduleName: group.lectureHeading,
-              topicName: lecture.topicName,
-              description: lecture.description,
-              sortOrder: lectureIndex,
-              id: `lecture_${Date.now()}_${lectureIndex}`,
-              videoFile: lecture.videoFile instanceof File ? URL.createObjectURL(lecture.videoFile) : '',
-            };
-            processedLectures.push(lectureData);
-          });
+          if (group.lectures && group.lectures.length > 0) {
+            group.lectures.forEach((lecture, lectureIndex) => {
+              // Use the existing lecture ID if available, otherwise generate a new one
+              const lectureId = lecture.id || `lecture_${Date.now()}_${lectureIndex}`;
+
+              const lectureData = {
+                id: lectureId,
+                moduleName: group.lectureHeading,
+                topicName: lecture.topicName,
+                description: lecture.description,
+                sortOrder: lectureIndex,
+                videoUrl: lecture.videoUrl || '',
+                videoFile: lecture.videoFile instanceof File ? URL.createObjectURL(lecture.videoFile) : (lecture.videoFile || ''),
+              };
+              processedLectures.push(lectureData);
+            });
+          }
         });
+
+        console.log('Processed lectures:', processedLectures);
 
         // Update the course with lectures data
         const updatedCourse = {
@@ -163,6 +221,8 @@ const Step3 = ({ goToNextStep, goBackToPreviousStep }) => {
           lectures: processedLectures,
           updatedAt: new Date().toISOString()
         };
+
+        console.log('Updated course with lectures:', updatedCourse);
 
         // Save the updated course back to localStorage
         localStorage.setItem('current_course', JSON.stringify(updatedCourse));
@@ -235,9 +295,14 @@ const Step3 = ({ goToNextStep, goBackToPreviousStep }) => {
       </div>
       <hr />
       <div className="row">
-        <Accordion className="accordion-icon accordion-bg-light" id="accordionLectureGroups" defaultActiveKey="0">
+        <Accordion className="accordion-icon accordion-bg-light" id="accordionLectureGroups" defaultActiveKey="0" style={{ minHeight: '200px' }}>
           {isLoading ? (
-            <span className="mx-auto w-fit">Loading...</span>
+            <div className="text-center py-5">
+              <div className="spinner-border text-primary" role="status">
+                <span className="visually-hidden">Loading...</span>
+              </div>
+              <p className="mt-2">Generating curriculum...</p>
+            </div>
           ) : (
             <>
               {lectureGroupFields.map((group, groupIndex) => (
@@ -257,22 +322,45 @@ const Step3 = ({ goToNextStep, goBackToPreviousStep }) => {
                       <div key={lectureIndex} className="lecture-item mb-4">
                         <div className="d-flex justify-content-between align-items-center">
                           <div className="position-relative">
-                            <button
-                              type="button"
-                              className="btn-round mb-0 stretched-link position-static btn btn-danger-soft btn-sm"
-                            >
-                              <svg
-                                stroke="currentColor"
-                                fill="currentColor"
-                                strokeWidth="0"
-                                viewBox="0 0 448 512"
-                                height="1em"
-                                width="1em"
-                                xmlns="http://www.w3.org/2000/svg"
+                            {lecture.videoUrl ? (
+                              <button
+                                type="button"
+                                className="btn-round mb-0 position-static btn btn-success-soft btn-sm"
+                                onClick={() => {
+                                  // Create a modal or popup to play the video
+                                  window.open(lecture.videoUrl, '_blank');
+                                }}
                               >
-                                <path d="M424.4 214.7L72.4 6.6C43.8-10.3 0 6.1 0 47.9V464c0 37.5 40.7 60.1 72.4 41.3l352-208c31.4-18.5 31.5-64.1 0-82.6z"></path>
-                              </svg>
-                            </button>
+                                <svg
+                                  stroke="currentColor"
+                                  fill="currentColor"
+                                  strokeWidth="0"
+                                  viewBox="0 0 448 512"
+                                  height="1em"
+                                  width="1em"
+                                  xmlns="http://www.w3.org/2000/svg"
+                                >
+                                  <path d="M424.4 214.7L72.4 6.6C43.8-10.3 0 6.1 0 47.9V464c0 37.5 40.7 60.1 72.4 41.3l352-208c31.4-18.5 31.5-64.1 0-82.6z"></path>
+                                </svg>
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                className="btn-round mb-0 position-static btn btn-danger-soft btn-sm"
+                              >
+                                <svg
+                                  stroke="currentColor"
+                                  fill="currentColor"
+                                  strokeWidth="0"
+                                  viewBox="0 0 448 512"
+                                  height="1em"
+                                  width="1em"
+                                  xmlns="http://www.w3.org/2000/svg"
+                                >
+                                  <path d="M424.4 214.7L72.4 6.6C43.8-10.3 0 6.1 0 47.9V464c0 37.5 40.7 60.1 72.4 41.3l352-208c31.4-18.5 31.5-64.1 0-82.6z"></path>
+                                </svg>
+                              </button>
+                            )}
                             <span className="ms-2 mb-0 h6 fw-light">{lecture.topicName}</span>
                           </div>
                           <div>

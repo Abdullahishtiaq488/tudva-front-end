@@ -7,6 +7,10 @@ import { FaAngleRight, FaCheckCircle, FaRegEdit, FaSearch, FaTable, FaTimes } fr
 import { FaAngleLeft } from 'react-icons/fa6';
 import { Button, Card, CardBody, CardHeader, Col, Row } from 'react-bootstrap';
 import Link from 'next/link';
+import { syncCourses } from '@/utils/courseSync';
+import { getAllSimpleCourses } from '@/utils/simpleCourseApi';
+import { getAllDirectCourses } from '@/utils/directCourseApi';
+import { getAllFileCourses } from '@/utils/fileCourseApi';
 const ManageCoursePage = () => {
   const [courses, setCourses] = useState([]);
   const [filteredCourses, setFilteredCourses] = useState([]);
@@ -16,23 +20,112 @@ const ManageCoursePage = () => {
   const [itemsPerPage] = useState(5);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Load courses from localStorage
+  // Load courses from backend and localStorage
   useEffect(() => {
     const loadCourses = async () => {
       try {
         setIsLoading(true);
-        const coursesStr = localStorage.getItem('courses');
-        if (coursesStr) {
-          const allCourses = JSON.parse(coursesStr);
-          // Sort by creation date (newest first)
-          const sortedCourses = allCourses.sort((a, b) => {
-            return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
-          });
-          setCourses(sortedCourses);
-          setFilteredCourses(sortedCourses);
+
+        // First try to get courses from the file-based API
+        try {
+          const fileCourses = await getAllFileCourses();
+          console.log('Courses from file-based API:', fileCourses);
+
+          if (fileCourses && fileCourses.length > 0) {
+            // Sort by creation date (newest first)
+            const sortedCourses = fileCourses.sort((a, b) => {
+              return new Date(b.createdAt || b.updatedAt || 0) - new Date(a.createdAt || a.updatedAt || 0);
+            });
+
+            setCourses(sortedCourses);
+            setFilteredCourses(sortedCourses);
+
+            // Also update localStorage with these courses
+            localStorage.setItem('courses', JSON.stringify(sortedCourses));
+
+            setIsLoading(false);
+            return;
+          } else {
+            console.log('No courses from file-based API, trying direct API');
+          }
+        } catch (fileApiError) {
+          console.warn('Error fetching from file-based API:', fileApiError);
         }
+
+        // Try direct API if file-based API fails or returns no courses
+        try {
+          const directCourses = await getAllDirectCourses();
+          console.log('Courses from direct API:', directCourses);
+
+          if (directCourses && directCourses.length > 0) {
+            // Sort by creation date (newest first)
+            const sortedCourses = directCourses.sort((a, b) => {
+              return new Date(b.createdAt || b.updatedAt || 0) - new Date(a.createdAt || a.updatedAt || 0);
+            });
+
+            setCourses(sortedCourses);
+            setFilteredCourses(sortedCourses);
+
+            // Also update localStorage with these courses
+            localStorage.setItem('courses', JSON.stringify(sortedCourses));
+
+            setIsLoading(false);
+            return;
+          } else {
+            console.log('No courses from direct API, trying simplified API');
+          }
+        } catch (directApiError) {
+          console.warn('Error fetching from direct API:', directApiError);
+        }
+
+        // Try simplified API if direct API fails or returns no courses
+        try {
+          const simplifiedCourses = await getAllSimpleCourses();
+          console.log('Courses from simplified API:', simplifiedCourses);
+
+          if (simplifiedCourses && simplifiedCourses.length > 0) {
+            // Sort by creation date (newest first)
+            const sortedCourses = simplifiedCourses.sort((a, b) => {
+              return new Date(b.createdAt || b.updatedAt || 0) - new Date(a.createdAt || a.updatedAt || 0);
+            });
+
+            setCourses(sortedCourses);
+            setFilteredCourses(sortedCourses);
+
+            // Also update localStorage with these courses
+            localStorage.setItem('courses', JSON.stringify(sortedCourses));
+
+            setIsLoading(false);
+            return;
+          }
+        } catch (simplifiedApiError) {
+          console.warn('Error fetching from simplified API:', simplifiedApiError);
+        }
+
+        // Fallback to localStorage via sync function
+        const allCourses = await syncCourses();
+
+        // Sort by creation date (newest first)
+        const sortedCourses = allCourses.sort((a, b) => {
+          return new Date(b.createdAt || b.updatedAt || 0) - new Date(a.createdAt || a.updatedAt || 0);
+        });
+
+        setCourses(sortedCourses);
+        setFilteredCourses(sortedCourses);
       } catch (error) {
         console.error('Error loading courses:', error);
+
+        // Fallback to localStorage if all else fails
+        try {
+          const coursesStr = localStorage.getItem('courses');
+          if (coursesStr) {
+            const localCourses = JSON.parse(coursesStr);
+            setCourses(localCourses);
+            setFilteredCourses(localCourses);
+          }
+        } catch (localError) {
+          console.error('Error loading from localStorage:', localError);
+        }
       } finally {
         // Ensure loading state is set to false even if there's an error
         setIsLoading(false);
