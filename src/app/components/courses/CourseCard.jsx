@@ -1,10 +1,10 @@
 "use client";
 
-import useToggle from "@/hooks/useToggle";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Card, CardBody, CardTitle, Col, Row } from "react-bootstrap";
-import { FaBaseballBall, FaHeart, FaNode, FaNodeJs, FaPython, FaRegClock, FaRegHeart, FaRegStar, FaSignal, FaStar, FaStarHalfAlt, FaTable } from "react-icons/fa";
+import { FaRegClock, FaRegStar, FaSignal, FaStar, FaStarHalfAlt, FaTable } from "react-icons/fa";
+import FavoriteButton from "@/components/favorites/FavoriteButton";
 
 
 import * as FaIcons from "react-icons/fa";
@@ -116,10 +116,7 @@ const CourseCard = ({
     color,
     badge
   } = course;
-  const {
-    isTrue,
-    toggle
-  } = useToggle(true);
+  // We'll use the FavoriteButton component instead of useToggle
   const router = useRouter();
   // Log the course data to help with debugging
   console.log('Course card data:', course);
@@ -181,7 +178,25 @@ const CourseCard = ({
         <CardBody>
           <div className="d-flex justify-content-between mb-2">
             <CardTitle className="mb-0"><a href="#">{title}</a></CardTitle>
-            <span role="button" onClick={toggle}>{isTrue ? <FaRegHeart /> : <FaHeart className="text-danger" />}</span>
+            <span onClick={(e) => e.stopPropagation()}>
+              <FavoriteButton
+                courseId={id}
+                variant="link"
+                size="sm"
+                iconOnly={true}
+                className="p-0 text-danger"
+                course={course} // Pass the course data
+                onFavoriteChange={(isFavorite) => {
+                  // Trigger a storage event to notify other components
+                  const event = new StorageEvent('storage', {
+                    key: 'user_favorites',
+                    newValue: localStorage.getItem('user_favorites'),
+                    url: window.location.href
+                  });
+                  window.dispatchEvent(event);
+                }}
+              />
+            </span>
           </div>
           <ul className="list-inline mb-1">
             <li className="list-inline-item h6 fw-light mb-1 mb-sm-0"><FaRegClock className="text-danger me-2" />{duration}</li>

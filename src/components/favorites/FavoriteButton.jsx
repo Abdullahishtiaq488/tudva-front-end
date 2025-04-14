@@ -1,10 +1,10 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Button, Spinner } from 'react-bootstrap';
 import { FaHeart, FaRegHeart } from 'react-icons/fa';
-import { toast } from 'react-hot-toast';
-import { addToFavorites, removeFromFavorites, checkIsFavorite } from '@/services/favoriteService';
+import toast from 'react-hot-toast';
+import { useFavorites } from '@/hooks/useFavorites';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 
@@ -14,36 +14,22 @@ const FavoriteButton = ({
   size = 'sm',
   className = '',
   iconOnly = false,
-  onFavoriteChange = null
+  onFavoriteChange = null,
+  course = null // Add course prop to store course data
 }) => {
-  const [isFavorite, setIsFavorite] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isProcessing, setIsProcessing] = useState(false);
   const { user } = useAuth();
   const router = useRouter();
+  const { isFavorite, isLoading, error, toggleFavorite } = useFavorites(courseId);
+  const [isProcessing, setIsProcessing] = useState(false);
 
-  useEffect(() => {
-    const checkFavoriteStatus = async () => {
-      if (!user || !courseId) {
-        setIsLoading(false);
-        return;
-      }
+  // Handle toggle favorite
+  const handleToggleFavorite = (e) => {
+    // Prevent the event from bubbling up to parent elements
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
 
-      try {
-        setIsLoading(true);
-        const response = await checkIsFavorite(courseId);
-        setIsFavorite(response.isFavorite);
-      } catch (error) {
-        console.error('Error checking favorite status:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    checkFavoriteStatus();
-  }, [courseId, user]);
-
-  const handleToggleFavorite = async () => {
     if (!user) {
       toast.error('Please log in to add favorites');
       router.push('/login');
@@ -54,20 +40,53 @@ const FavoriteButton = ({
 
     try {
       setIsProcessing(true);
+      console.log('Toggling favorite for course:', courseId);
 
-      if (isFavorite) {
-        await removeFromFavorites(courseId);
-        toast.success('Removed from favorites');
+      // Use the toggleFavorite function from the hook
+      const result = toggleFavorite();
+      console.log('Toggle favorite result:', result);
+
+      if (result.success) {
+        // If adding to favorites, store course data in localStorage
+        if (result.added && course) {
+          try {
+            console.log('Storing course in localStorage when favoriting:', course);
+
+            // Update the courses array if it exists
+            const coursesStr = localStorage.getItem('courses');
+            if (coursesStr) {
+              const courses = JSON.parse(coursesStr);
+              // Check if course already exists
+              const existingIndex = courses.findIndex(c => c.id === courseId);
+              if (existingIndex >= 0) {
+                // Update existing course
+                courses[existingIndex] = course;
+              } else {
+                // Add new course
+                courses.push(course);
+              }
+              localStorage.setItem('courses', JSON.stringify(courses));
+            } else {
+              // Create new courses array
+              localStorage.setItem('courses', JSON.stringify([course]));
+            }
+          } catch (error) {
+            console.error('Error storing course in localStorage:', error);
+          }
+        }
+
+        toast.success(
+          result.added
+            ? 'Added to favorites'
+            : 'Removed from favorites'
+        );
+
+        // Call the callback if provided
+        if (onFavoriteChange) {
+          onFavoriteChange(result.added);
+        }
       } else {
-        await addToFavorites(courseId);
-        toast.success('Added to favorites');
-      }
-
-      setIsFavorite(!isFavorite);
-
-      // Call the callback if provided
-      if (onFavoriteChange) {
-        onFavoriteChange(!isFavorite);
+        toast.error(result.error || 'Failed to update favorites');
       }
     } catch (error) {
       console.error('Error toggling favorite:', error);

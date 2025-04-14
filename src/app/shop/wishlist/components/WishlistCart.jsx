@@ -1,84 +1,14 @@
 'use client';
 
-import { getFavorites, removeFromFavorites } from '@/services/favoriteService';
-import Image from 'next/image';
+import { getLocalFavorites, removeFromLocalFavorites } from '@/services/localFavoriteService';
 import Link from 'next/link';
 import React, { useEffect, useState } from 'react';
-import { Card, CardBody, CardFooter, CardTitle, Col, Container, Row } from 'react-bootstrap';
-import { FaHeart, FaRegClock, FaRegHeart, FaRegStar, FaStar, FaStarHalfAlt, FaTable, FaTrash } from 'react-icons/fa';
+import { Col, Container, Row } from 'react-bootstrap';
+import { FaTrash } from 'react-icons/fa';
 import toast from 'react-hot-toast';
+import CourseCard from '@/app/components/courses/CourseCard';
 
-const WishlistCard = ({ course, onRemove }) => {
-  // Extract course data with fallbacks
-  const {
-    id,
-    title = 'Untitled Course',
-    short_description = '',
-    level = 'Beginner',
-    icon,
-    modules = [],
-  } = course || {};
 
-  // Default image if icon is not available
-  const imageUrl = icon || '/assets/images/courses/4by3/01.jpg';
-
-  // Calculate rating (placeholder for now)
-  const rating = { star: 4.5 };
-
-  // Handle remove from favorites
-  const handleRemove = async (e) => {
-    e.preventDefault();
-    if (onRemove) {
-      onRemove(id);
-    }
-  };
-
-  return <Card className="shadow">
-    {/* Use a regular img tag with fallback for now */}
-    <img src={imageUrl} className="card-img-top" alt="course image" />
-    <CardBody className="pb-0">
-      <div className="d-flex justify-content-between mb-2">
-        <span className="badge bg-success bg-opacity-10 text-success">{level}</span>
-        <Link href="" className="text-danger" onClick={handleRemove}>
-          <FaHeart fill="red" />
-        </Link>
-      </div>
-      <CardTitle className="fw-normal">
-        <Link href={`/pages/course/detail-min/${id}`}>{title}</Link>
-      </CardTitle>
-      <p className="mb-2 text-truncate-2">{short_description}</p>
-      <ul className="list-inline mb-0">
-        {Array(Math.floor(rating.star)).fill(0).map((_star, idx) =>
-          <li key={idx} className="list-inline-item me-1 small">
-            <FaStar size={14} className="text-warning" />
-          </li>
-        )}
-        {!Number.isInteger(rating.star) &&
-          <li className="list-inline-item me-1 small">
-            <FaStarHalfAlt size={14} className="text-warning" />
-          </li>
-        }
-        {rating.star < 5 && Array(5 - Math.ceil(rating.star)).fill(0).map((_star, idx) =>
-          <li key={idx} className="list-inline-item me-1 small">
-            <FaRegStar size={14} className="text-warning" />
-          </li>
-        )}
-        <li className="list-inline-item ms-2 h6 fw-light mb-0">{rating.star}/5.0</li>
-      </ul>
-    </CardBody>
-    <CardFooter className="pt-0 pb-3">
-      <hr />
-      <div className="d-flex justify-content-between">
-        <span className="h6 fw-light mb-0 icons-center">
-          <FaRegClock className="text-danger me-2" />45m per lecture
-        </span>
-        <span className="h6 fw-light mb-0 icons-center">
-          <FaTable className="text-orange me-2" />{modules.length || 0} modules
-        </span>
-      </div>
-    </CardFooter>
-  </Card>;
-};
 
 const WishlistCart = () => {
   const [favorites, setFavorites] = useState([]);
@@ -87,13 +17,39 @@ const WishlistCart = () => {
 
   // Fetch favorites on component mount
   useEffect(() => {
-    const fetchFavorites = async () => {
+    const fetchFavorites = () => {
       try {
         setIsLoading(true);
-        const response = await getFavorites();
-        if (response.success) {
-          setFavorites(response.favorites || []);
-        }
+
+        // Get favorite IDs from localStorage
+        const favoriteIds = getLocalFavorites();
+        console.log('Favorite IDs from localStorage:', favoriteIds);
+
+        // Get course details for each favorite
+        const coursesFromStorage = JSON.parse(localStorage.getItem('courses') || '[]');
+        console.log('Courses from storage:', coursesFromStorage);
+
+        // Filter courses that are in favorites
+        const favoriteCourses = coursesFromStorage.filter(course =>
+          favoriteIds.includes(course.id)
+        );
+        console.log('Favorite courses:', favoriteCourses);
+
+        // Add default values for any missing properties required by CourseCard
+        const processedCourses = favoriteCourses.map(course => ({
+          ...course,
+          id: course.id, // Ensure ID is present
+          title: course.title || 'Untitled Course',
+          lectures: course.lectures || course.modules?.length || 0,
+          duration: course.duration || '45m',
+          rating: course.rating || { star: 4.5 },
+          badge: course.badge || { text: course.level || 'Beginner' },
+          color: course.color || '#0d6efd',
+          icon: course.icon || 'FaBook'
+        }));
+
+        console.log('Processed courses for wishlist:', processedCourses);
+        setFavorites(processedCourses);
       } catch (err) {
         console.error('Error fetching favorites:', err);
         setError('Failed to load favorites. Please try again later.');
@@ -104,15 +60,43 @@ const WishlistCart = () => {
     };
 
     fetchFavorites();
+
+    // Add storage event listener to update favorites when localStorage changes
+    const handleStorageChange = (e) => {
+      if (e.key === 'user_favorites') {
+        console.log('Favorites changed in localStorage, refreshing...');
+        fetchFavorites();
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
   }, []);
 
   // Handle removing a course from favorites
-  const handleRemoveFavorite = async (courseId) => {
+  const handleRemoveFavorite = (courseId) => {
     try {
-      await removeFromFavorites(courseId);
-      // Update the favorites list
-      setFavorites(favorites.filter(fav => fav.course_id !== courseId));
-      toast.success('Course removed from favorites');
+      const result = removeFromLocalFavorites(courseId);
+
+      if (result.success) {
+        // Update the favorites list
+        setFavorites(favorites.filter(course => course.id !== courseId));
+        toast.success('Course removed from favorites');
+
+        // Trigger a storage event to notify other components
+        const event = new StorageEvent('storage', {
+          key: 'user_favorites',
+          newValue: localStorage.getItem('user_favorites'),
+          url: window.location.href
+        });
+        window.dispatchEvent(event);
+      } else {
+        setError('Failed to remove from favorites. Please try again.');
+        toast.error('Failed to remove from favorites');
+      }
     } catch (err) {
       console.error('Error removing favorite:', err);
       setError('Failed to remove from favorites. Please try again.');
@@ -121,13 +105,20 @@ const WishlistCart = () => {
   };
 
   // Handle removing all favorites
-  const handleRemoveAll = async () => {
+  const handleRemoveAll = () => {
     try {
-      // This would ideally be a single API call, but for now we'll remove them one by one
-      const removePromises = favorites.map(fav => removeFromFavorites(fav.course_id));
-      await Promise.all(removePromises);
+      // Clear all favorites from localStorage
+      localStorage.setItem('user_favorites', '[]');
       setFavorites([]);
       toast.success('All courses removed from favorites');
+
+      // Trigger a storage event to notify other components
+      const event = new StorageEvent('storage', {
+        key: 'user_favorites',
+        newValue: '[]',
+        url: window.location.href
+      });
+      window.dispatchEvent(event);
     } catch (err) {
       console.error('Error removing all favorites:', err);
       setError('Failed to remove all favorites. Please try again.');
@@ -138,7 +129,7 @@ const WishlistCart = () => {
   if (isLoading) {
     return (
       <section className="pt-5">
-        <Container>
+        <Container className="py-3">
           <div className="text-center py-5">
             <div className="spinner-border text-primary" role="status">
               <span className="visually-hidden">Loading...</span>
@@ -153,7 +144,7 @@ const WishlistCart = () => {
   if (error) {
     return (
       <section className="pt-5">
-        <Container>
+        <Container className="py-3">
           <div className="alert alert-danger" role="alert">
             {error}
           </div>
@@ -164,7 +155,7 @@ const WishlistCart = () => {
 
   return (
     <section className="pt-5">
-      <Container>
+      <Container className="py-3">
         <div className="d-sm-flex justify-content-sm-between align-items-center mb-4">
           <h5 className="mb-2 mb-sm-0">
             You have {favorites.length} {favorites.length === 1 ? 'item' : 'items'} in wishlist
@@ -190,18 +181,27 @@ const WishlistCart = () => {
           </div>
         ) : (
           <Row className="g-4">
-            {favorites.map((favorite) => (
-              <Col sm={6} lg={4} xl={3} key={favorite.id}>
-                <WishlistCard
-                  course={favorite.course}
-                  onRemove={() => handleRemoveFavorite(favorite.course_id)}
-                />
+            {favorites.map((course) => (
+              <Col md={12} lg={12} xl={6} key={course.id}>
+                <div className="position-relative mb-4">
+                  <CourseCard course={course} />
+                  <button
+                    className="btn btn-sm btn-danger position-absolute top-0 end-0 m-2 rounded-circle"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleRemoveFavorite(course.id);
+                    }}
+                    title="Remove from wishlist"
+                  >
+                    <FaTrash size={12} />
+                  </button>
+                </div>
               </Col>
             ))}
           </Row>
         )}
       </Container>
-    </section>
+    </section >
   );
 };
 

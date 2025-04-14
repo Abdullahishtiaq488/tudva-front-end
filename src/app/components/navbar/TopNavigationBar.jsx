@@ -239,7 +239,9 @@ const TopNavigationBar = () => {
             {isAuthenticated && user && (
               <>
                 <li className="nav-item ms-0 ms-sm-2 d-none d-sm-block">
-                  <Link className="btn btn-light btn-round mb-0" href="/shop/wishlist"> <BsHeart className="fa-fw" /></Link>
+                  <Link className="btn btn-light btn-round mb-0" href="/shop/wishlist" title="My Wishlist">
+                    <BsHeart className="fa-fw" />
+                  </Link>
                 </li>
                 <NotificationDropdown />
               </>
