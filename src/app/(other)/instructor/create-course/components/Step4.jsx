@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Col, Row, Button, Badge, Form, Card } from 'react-bootstrap';
+import { Col, Row, Button, Badge, Form, Card, Spinner } from 'react-bootstrap';
 import { useFieldArray, useFormContext } from 'react-hook-form';
-import { FaEdit, FaTimes, FaCalendarAlt, FaClock } from 'react-icons/fa';
+import { FaEdit, FaTimes, FaCalendarAlt, FaClock, FaInfoCircle } from 'react-icons/fa';
 import AddToQuestion from './AddToQuestion';
 import { v4 as uuidv4 } from 'uuid';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -11,6 +11,8 @@ import { addCourse } from '@/utils/courseSync';
 import { createSimpleCourse } from '@/utils/simpleCourseApi';
 import { createDirectCourse } from '@/utils/directCourseApi';
 import { createFileCourse, updateFileCourse } from '@/utils/fileCourseApi';
+import EnhancedScheduling from './EnhancedScheduling';
+import LectureSchedulePreview from './LectureSchedulePreview';
 
 const Step4 = ({ goBackToPreviousStep, onSubmit }) => {
   const { register, formState: { errors }, control, setValue, getValues, watch } = useFormContext();
@@ -25,6 +27,7 @@ const Step4 = ({ goBackToPreviousStep, onSubmit }) => {
   const [selectedSlots, setSelectedSlots] = useState([]);
   const [estimatedEndDate, setEstimatedEndDate] = useState(null);
   const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Watch the number of lectures to calculate end date
   const lectureGroups = watch('lectureGroups') || [];
@@ -338,6 +341,7 @@ const Step4 = ({ goBackToPreviousStep, onSubmit }) => {
     try {
       // Show loading toast
       toast.loading('Creating course...', { id: 'create-course' });
+      setIsSubmitting(true);
 
       // Get form data
       const formData = getValues();
@@ -345,17 +349,20 @@ const Step4 = ({ goBackToPreviousStep, onSubmit }) => {
 
       if (!courseId) {
         toast.error('Course ID is missing. Please start from Step 1.', { id: 'create-course' });
+        setIsSubmitting(false);
         return;
       }
 
       // Validate scheduling data
       if (!selectedDay) {
         toast.error('Please select a day for the course', { id: 'create-course' });
+        setIsSubmitting(false);
         return;
       }
 
       if (selectedSlots.length === 0) {
         toast.error('Please select at least one time slot', { id: 'create-course' });
+        setIsSubmitting(false);
         return;
       }
 
@@ -379,7 +386,8 @@ const Step4 = ({ goBackToPreviousStep, onSubmit }) => {
         selectedSlots: selectedSlots,
         startDate: new Date(startDate).toISOString(),
         endDate: estimatedEndDate ? new Date(estimatedEndDate).toISOString() : new Date().toISOString(),
-        totalWeeks: Math.ceil(currentCourse.modulesCount / slotsPerDay)
+        totalWeeks: Math.ceil(currentCourse.modulesCount / slotsPerDay),
+        regenerateSchedules: true // Always regenerate schedules when submitting
       };
 
       // Create the minimal course object for backend submission
@@ -748,117 +756,28 @@ const Step4 = ({ goBackToPreviousStep, onSubmit }) => {
         {/* Course Scheduling Section */}
         <Col xs={12}>
           <div className="bg-light border rounded p-2 p-sm-4">
-            <div className="d-sm-flex justify-content-sm-between align-items-center mb-3">
-              <h5 className="mb-2 mb-sm-0">Course Scheduling</h5>
-              {estimatedEndDate && (
-                <Badge bg="info" className="fs-6">
-                  <FaCalendarAlt className="me-2" />
-                  Estimated End Date: {estimatedEndDate}
-                </Badge>
-              )}
-            </div>
+            {/* Enhanced Course Scheduling */}
+            <EnhancedScheduling
+              selectedDay={selectedDay}
+              setSelectedDay={setSelectedDay}
+              slotsPerDay={slotsPerDay}
+              setSlotsPerDay={setSlotsPerDay}
+              selectedSlots={selectedSlots}
+              setSelectedSlots={setSelectedSlots}
+              startDate={startDate}
+              setStartDate={setStartDate}
+              estimatedEndDate={estimatedEndDate}
+              setEstimatedEndDate={setEstimatedEndDate}
+              courseType={courseType}
+            />
 
-            <Row className="g-4 mb-4">
-              {/* Start Date */}
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label>Start Date</Form.Label>
-                  <Form.Control
-                    type="date"
-                    value={startDate}
-                    onChange={(e) => {
-                      setStartDate(e.target.value);
-                      const newStartDate = new Date(e.target.value);
-                      // Recalculate end date
-                      const totalLectures = lectureGroups.reduce((total, group) => {
-                        return total + (group.lectures ? group.lectures.length : 0);
-                      }, 0);
-                      const weeksNeeded = Math.ceil(totalLectures / slotsPerDay);
-                      const endDate = new Date(newStartDate);
-                      endDate.setDate(newStartDate.getDate() + (weeksNeeded * 7));
-                      setEstimatedEndDate(endDate.toLocaleDateString('en-US', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric'
-                      }));
-                    }}
-                    className="form-control"
-                  />
-                  <Form.Text className="text-muted">
-                    Select the start date for this course
-                  </Form.Text>
-                </Form.Group>
-              </Col>
-
-              {/* Day Selection */}
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label>Select Day</Form.Label>
-                  <Form.Select
-                    value={selectedDay}
-                    onChange={(e) => setSelectedDay(e.target.value)}
-                    className="form-control"
-                  >
-                    {daysOfWeek.map(day => (
-                      <option key={day.id} value={day.id}>{day.name}</option>
-                    ))}
-                  </Form.Select>
-                  <Form.Text className="text-muted">
-                    Select the day of the week for this course
-                  </Form.Text>
-                </Form.Group>
-              </Col>
-
-              {/* Slots Per Day */}
-              <Col md={6}>
-                <Form.Group>
-                  <Form.Label>Slots Per Day</Form.Label>
-                  <Form.Select
-                    value={slotsPerDay}
-                    onChange={handleSlotsPerDayChange}
-                    className="form-control"
-                  >
-                    {[1, 2, 3, 4, 5, 6, 7, 8].map(num => (
-                      <option key={num} value={num}>{num} slot{num !== 1 ? 's' : ''}</option>
-                    ))}
-                  </Form.Select>
-                  <Form.Text className="text-muted">
-                    Number of 45-minute slots per day
-                  </Form.Text>
-                </Form.Group>
-              </Col>
-            </Row>
-
-            {/* Time Slots */}
-            <Form.Group className="mb-3">
-              <Form.Label>Select Time Slots (Choose {slotsPerDay})</Form.Label>
-              <Row className="g-2">
-                {timeSlots.map(slot => (
-                  <Col key={slot.id} xs={12} sm={6} md={4} lg={3}>
-                    <Card
-                      className={`mb-2 ${selectedSlots.includes(slot.id) ? 'border-primary border-2' : 'border'}`}
-                      onClick={() => handleSlotSelection(slot.id)}
-                      style={{ cursor: 'pointer' }}
-                    >
-                      <Card.Body className={`p-2 ${selectedSlots.includes(slot.id) ? 'bg-primary text-white' : ''}`}>
-                        <div className="d-flex align-items-center">
-                          <FaClock className="me-2" />
-                          <span>{slot.time}</span>
-                        </div>
-                        {selectedSlots.includes(slot.id) && (
-                          <div className="mt-1 text-center">
-                            <Badge bg="light" text="primary">Selected</Badge>
-                          </div>
-                        )}
-                      </Card.Body>
-                    </Card>
-                  </Col>
-                ))}
-              </Row>
-              <Form.Text className="text-muted">
-                Click to select/deselect time slots
-              </Form.Text>
-            </Form.Group>
+            {/* Lecture Schedule Preview */}
+            <LectureSchedulePreview
+              selectedDay={selectedDay}
+              selectedSlots={selectedSlots}
+              startDate={startDate}
+              courseType={courseType}
+            />
           </div>
         </Col>
 
@@ -928,9 +847,18 @@ const Step4 = ({ goBackToPreviousStep, onSubmit }) => {
           </div>
         </Col>
         <div className="d-md-flex justify-content-between align-items-start mt-4">
-          <button className="btn btn-secondary prev-btn mb-2 mb-md-0" onClick={goBackToPreviousStep}>Previous</button>
+          <button className="btn btn-secondary prev-btn mb-2 mb-md-0" onClick={goBackToPreviousStep} disabled={isSubmitting}>Previous</button>
           <div className="text-md-end">
-            <Button className="btn btn-success mb-2 mb-sm-0" onClick={handleSubmit}>Submit a Course</Button>
+            <Button className="btn btn-success mb-2 mb-sm-0" onClick={handleSubmit} disabled={isSubmitting}>
+              {isSubmitting ? (
+                <>
+                  <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" className="me-2" />
+                  Submitting...
+                </>
+              ) : (
+                'Submit a Course'
+              )}
+            </Button>
           </div>
         </div>
       </Row>

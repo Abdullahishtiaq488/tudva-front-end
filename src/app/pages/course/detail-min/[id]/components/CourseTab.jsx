@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Fragment } from "react";
 import { useForm } from "react-hook-form";
-import { FaCheckCircle, FaRegStar, FaReply, FaStar, FaStarHalfAlt } from "react-icons/fa";
+import { FaCheckCircle, FaRegStar, FaReply, FaStar, FaStarHalfAlt, FaCalendarAlt } from "react-icons/fa";
 import * as yup from 'yup';
 import { useFetchData } from "@/hooks/useFetchData";
 import { splitArray } from "@/utils/array";
@@ -19,6 +19,7 @@ import avatar9 from '@/assets/images/avatar/09.jpg';
 import { commentData, faqsData } from "../data";
 import { getAllUserReviews } from "@/helpers/data";
 import ReviewList from "@/components/reviews/ReviewList";
+import LectureScheduleDisplay from "../../../components/LectureScheduleDisplay";
 const Overview = ({ course }) => {
   const features = ["Digital marketing course introduction", "Customer Life cycle", "What is Search engine optimization(SEO)", "Facebook ADS", "Facebook Messenger Chatbot", "Search engine optimization tools", "Why SEO", "URL Structure", "Featured Snippet", "SEO tips and tricks", "Google tag manager"];
   const featureChunks = splitArray(features, 2);
@@ -145,11 +146,29 @@ const Comment = () => {
     </Col>
   </Row>;
 };
+// Schedule component
+const Schedule = ({ course }) => {
+  return (
+    <>
+      <h5 className="mb-3">Course Schedule</h5>
+      <LectureScheduleDisplay
+        courseId={course?.course?.id}
+        courseType={course?.course?.format || 'recorded'}
+      />
+    </>
+  );
+};
+
 const CourseTab = ({ course }) => {
   return <TabContainer defaultActiveKey='overview'>
     <Nav className="nav-pills nav-pills-bg-soft px-3" id="course-pills-tab" role="tablist">
       <NavItem className="me-2 me-sm-4" role="presentation">
         <NavLink as='button' className="mb-0" type="button" eventKey="overview">Overview</NavLink>
+      </NavItem>
+      <NavItem className="me-2 me-sm-4" role="presentation">
+        <NavLink as='button' className="mb-0" type="button" eventKey="schedule">
+          <FaCalendarAlt className="me-1" /> Schedule
+        </NavLink>
       </NavItem>
       <NavItem className="me-2 me-sm-4" role="presentation">
         <NavLink as='button' className="mb-0" type="button" eventKey="reviews">Reviews</NavLink>
@@ -164,6 +183,9 @@ const CourseTab = ({ course }) => {
     <TabContent className="pt-4 px-3" id="course-pills-tabContent">
       <TabPane eventKey='overview' className="fade" role="tabpanel">
         <Overview course={course} />
+      </TabPane>
+      <TabPane eventKey='schedule' className="fade" role="tabpanel">
+        <Schedule course={course} />
       </TabPane>
       <TabPane eventKey='reviews' className="fade" role="tabpanel">
         <UserReviews course={course} />

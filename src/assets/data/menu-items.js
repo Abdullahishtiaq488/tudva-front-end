@@ -1,5 +1,5 @@
 import { BsBasket, BsBasketFill, BsCardChecklist, BsCartCheck, BsCartCheckFill, BsCreditCard2Front, BsCreditCard2FrontFill, BsFileCheckFill, BsFileEarmarkPlusFill, BsFolderCheck, BsGear, BsGraphUp, BsGridFill, BsHouse, BsLock, BsPencilSquare, BsPeople, BsQuestionDiamond, BsStar, BsStarFill, BsTrash, BsUiChecksGrid, BsUiRadiosGrid, BsWallet2 } from "react-icons/bs";
-import { FaBasketballBall, FaChartBar, FaCog, FaEdit, FaFacebook, FaLinkedinIn, FaRegCommentDots, FaRegFileAlt, FaTrashAlt, FaUserCog } from "react-icons/fa";
+import { FaBasketballBall, FaCalendarAlt, FaChartBar, FaCog, FaEdit, FaFacebook, FaLinkedinIn, FaRegCommentDots, FaRegFileAlt, FaTrashAlt, FaUserCog } from "react-icons/fa";
 import { FaChartLine, FaUserGraduate, FaUserTie, FaWallet } from "react-icons/fa6";
 import clientUnitLogo1 from '@/assets/images/client/uni-logo-01.svg';
 import clientUnitLogo2 from '@/assets/images/client/uni-logo-02.svg';
@@ -153,6 +153,12 @@ export const STUDENT_MENU_ITEMS = [
     label: 'My Courses',
     icon: BsBasket,
     url: '/student/course-list',
+    parentKey: 'student'
+  }, {
+    key: 'schedule',
+    label: 'My Schedule',
+    icon: FaCalendarAlt,
+    url: '/student/schedule',
     parentKey: 'student'
   }, {
     key: 'resume',
