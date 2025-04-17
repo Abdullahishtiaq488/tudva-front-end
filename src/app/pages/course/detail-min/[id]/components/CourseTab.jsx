@@ -19,13 +19,15 @@ import avatar9 from '@/assets/images/avatar/09.jpg';
 import { commentData, faqsData } from "../data";
 import { getAllUserReviews } from "@/helpers/data";
 import ReviewList from "@/components/reviews/ReviewList";
-import LectureScheduleDisplay from "../../../components/LectureScheduleDisplay";
+// Import the local copy of LectureScheduleDisplay
+import LectureScheduleDisplay from "./LectureScheduleDisplay";
 const Overview = ({ course }) => {
+  console.log('Overview component received course:', course);
   const features = ["Digital marketing course introduction", "Customer Life cycle", "What is Search engine optimization(SEO)", "Facebook ADS", "Facebook Messenger Chatbot", "Search engine optimization tools", "Why SEO", "URL Structure", "Featured Snippet", "SEO tips and tricks", "Google tag manager"];
   const featureChunks = splitArray(features, 2);
   return <>
     <h5 className="mb-3">Course Description</h5>
-    <div dangerouslySetInnerHTML={{ __html: course?.description || '' }} />
+    <div dangerouslySetInnerHTML={{ __html: course?.course?.description || course?.description || '' }} />
     <h5 className="mt-4">What you’ll learn</h5>
     <Row className="mb-3">
       {featureChunks.map((chunk, idx) => <Col md={6} key={idx}>
@@ -35,6 +37,19 @@ const Overview = ({ course }) => {
       </Col>)}
     </Row>
 
+    {course?.course?.level && (
+      <div className="mt-4">
+        <h5 className="mb-2">Course Level</h5>
+        <p>{course.course.level}</p>
+      </div>
+    )}
+
+    {course?.course?.language && (
+      <div className="mt-4">
+        <h5 className="mb-2">Language</h5>
+        <p>{course.course.language}</p>
+      </div>
+    )}
   </>;
 };
 const UserReviews = ({ course }) => {
@@ -148,12 +163,13 @@ const Comment = () => {
 };
 // Schedule component
 const Schedule = ({ course }) => {
+  console.log('Schedule component received course:', course);
   return (
     <>
       <h5 className="mb-3">Course Schedule</h5>
       <LectureScheduleDisplay
         courseId={course?.course?.id}
-        courseType={course?.course?.format || 'recorded'}
+        courseType={course?.course?.courseType || course?.course?.format || 'recorded'}
       />
     </>
   );

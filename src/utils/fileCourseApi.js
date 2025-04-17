@@ -10,8 +10,8 @@ export const createFileCourse = async (courseData) => {
   try {
     console.log('Creating course with file-based API:', courseData);
 
-    // Create a simplified course object with all necessary data
-    const simplifiedCourse = {
+    // Create a complete course object with all necessary data
+    const completeCourse = {
       title: courseData.title,
       shortDesription: courseData.shortDesription || courseData.short_description,
       description: courseData.description || courseData.shortDesription || courseData.short_description,
@@ -21,9 +21,13 @@ export const createFileCourse = async (courseData) => {
       format: courseData.format || courseData.courseType || 'recorded',
       modulesCount: courseData.modulesCount || courseData.modules_count || 4,
       instructor_id: courseData.instructor_id,
-      color: courseData.color,
-      icon: courseData.icon,
-      promoVideoUrl: courseData.promoVideoUrl || courseData.promo_video_url,
+      // Add missing fields with defaults
+      color: courseData.color || '#630000', // Default red color
+      icon: courseData.icon || 'FaBook', // Default book icon
+      promoVideoUrl: courseData.promoVideoUrl || courseData.promo_video_url || '',
+      estimatedDuration: courseData.estimatedDuration || '10 hours',
+      totalLectures: courseData.totalLectures || courseData.modulesCount * 3 || 12,
+      status: courseData.status || 'published',
       lectures: Array.isArray(courseData.lectures) ? courseData.lectures.map(lecture => ({
         id: lecture.id,
         moduleName: lecture.moduleName,
@@ -47,7 +51,7 @@ export const createFileCourse = async (courseData) => {
     // Make the API call
     const response = await axios.post(
       `${getBackendUrl()}/api/file-courses/create`,
-      simplifiedCourse
+      completeCourse
     );
 
     console.log('File-based course creation response:', response.data);
@@ -86,8 +90,8 @@ export const updateFileCourse = async (id, courseData) => {
   try {
     console.log('Updating course with file-based API:', courseData);
 
-    // Create a simplified course object with all necessary data
-    const simplifiedCourse = {
+    // Create a complete course object with all necessary data
+    const completeCourse = {
       title: courseData.title,
       shortDesription: courseData.shortDesription || courseData.short_description,
       description: courseData.description || courseData.shortDesription || courseData.short_description,
@@ -97,9 +101,13 @@ export const updateFileCourse = async (id, courseData) => {
       format: courseData.format || courseData.courseType || 'recorded',
       modulesCount: courseData.modulesCount || courseData.modules_count || 4,
       instructor_id: courseData.instructor_id,
-      color: courseData.color,
-      icon: courseData.icon,
-      promoVideoUrl: courseData.promoVideoUrl || courseData.promo_video_url,
+      // Add missing fields with defaults
+      color: courseData.color || '#630000', // Default red color
+      icon: courseData.icon || 'FaBook', // Default book icon
+      promoVideoUrl: courseData.promoVideoUrl || courseData.promo_video_url || '',
+      estimatedDuration: courseData.estimatedDuration || '10 hours',
+      totalLectures: courseData.totalLectures || courseData.modulesCount * 3 || 12,
+      status: courseData.status || 'published',
       lectures: Array.isArray(courseData.lectures) ? courseData.lectures.map(lecture => ({
         id: lecture.id,
         moduleName: lecture.moduleName,
@@ -124,7 +132,7 @@ export const updateFileCourse = async (id, courseData) => {
 
     const response = await axios.put(
       `${getBackendUrl()}/api/file-courses/${id}`,
-      simplifiedCourse
+      completeCourse
     );
 
     console.log('File-based course update response:', response.data);

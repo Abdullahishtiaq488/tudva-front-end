@@ -11,6 +11,7 @@ import { addCourse } from '@/utils/courseSync';
 import { createSimpleCourse } from '@/utils/simpleCourseApi';
 import { createDirectCourse } from '@/utils/directCourseApi';
 import { createFileCourse, updateFileCourse } from '@/utils/fileCourseApi';
+import { syncCourse } from '@/utils/syncUtils';
 import EnhancedScheduling from './EnhancedScheduling';
 import LectureSchedulePreview from './LectureSchedulePreview';
 
@@ -486,6 +487,15 @@ const Step4 = ({ goBackToPreviousStep, onSubmit }) => {
 
           // Also update current_course in localStorage
           localStorage.setItem('current_course', JSON.stringify(updatedCourse));
+
+          // Sync the course with the database
+          try {
+            await syncCourse(result.course.id || courseId);
+            console.log('Course synced successfully');
+          } catch (syncError) {
+            console.error('Error syncing course:', syncError);
+            // Don't block the redirect if sync fails
+          }
 
           // Redirect to manage course page
           setTimeout(() => {

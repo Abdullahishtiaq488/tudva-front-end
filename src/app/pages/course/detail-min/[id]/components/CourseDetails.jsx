@@ -46,15 +46,16 @@ const CourseDetails = ({ course, onVideoSelect }) => {
                   <div className="avatar avatar-lg">
                     <img
                       className="avatar-img rounded-circle"
-                      src={course?.course?.instructor?.avatar || '/assets/images/avatar/01.jpg'}
+                      src={course?.course?.instructor?.profilePicture || '/assets/images/avatar/01.jpg'}
                       alt="instructor avatar"
                       width={80}
                       height={80}
                     />
                   </div>
                   <div className="ms-3">
-                    <h6 className="mb-0"><a href="#">By {course?.course?.instructor?.name || 'Instructor Name'}</a></h6>
-                    <p className="mb-0 small">{course?.course?.instructor?.title || 'Course Instructor'}</p>
+                    <h6 className="mb-0"><a href="#">By {course?.course?.instructor?.fullName || 'Instructor Name'}</a></h6>
+                    <p className="mb-0 small">{course?.course?.instructor?.aboutMe || 'Course Instructor'}</p>
+                    <p className="mb-0 small text-muted">{course?.course?.instructor?.email || ''}</p>
                   </div>
                 </div>
                 <div className="d-flex mt-2 mt-sm-0">

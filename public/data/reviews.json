@@ -11,6 +11,18 @@
       "helpfulCount": 0,
       "createdAt": "2025-04-09T22:46:13.976Z",
       "updatedAt": "2025-04-09T22:46:13.976Z"
+    },
+    {
+      "id": "49b0005b-9cb9-4b80-8357-75f2b9a61447",
+      "user_id": "b5b3c8d0-bad3-486c-85ff-40dbb5391d43",
+      "userName": "Abdullah Khan",
+      "courseId": "708f8650-5dc0-412b-b3e8-837639123147",
+      "content": "Good Course",
+      "rating": 4,
+      "isVisible": true,
+      "helpfulCount": 0,
+      "createdAt": "2025-04-16T17:55:45.808Z",
+      "updatedAt": "2025-04-16T17:55:45.808Z"
     }
   ]
 }

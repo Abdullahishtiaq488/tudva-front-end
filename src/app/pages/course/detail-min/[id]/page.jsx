@@ -14,6 +14,7 @@ import TopNavigationBar from "./components/TopNavigationBar";
 const BannerVideo = dynamic(() => import("./components/BannerVideo"), { ssr: false });
 const CourseDetails = dynamic(() => import("./components/CourseDetails"), { ssr: false });
 const CourseDetailSkeleton = dynamic(() => import("./components/CourseDetailSkeleton"), { ssr: false });
+const CourseBanner = dynamic(() => import("./components/CourseBanner"), { ssr: false });
 
 const DetailMinimal = () => {
   const params = useParams();
@@ -357,6 +358,7 @@ const DetailMinimal = () => {
   return <>
     <TopNavigationBar />
     <main>
+      <CourseBanner course={course} />
       <BannerVideo course={course} selectedVideo={currentVideo} onVideoSelect={handleVideoSelect} />
       <CourseDetails course={course} onVideoSelect={handleVideoSelect} />
     </main>

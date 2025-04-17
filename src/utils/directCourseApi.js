@@ -10,8 +10,8 @@ export const createDirectCourse = async (courseData) => {
   try {
     console.log('Creating course with direct API:', courseData);
 
-    // Create a simplified course object
-    const simplifiedCourse = {
+    // Create a complete course object with all required fields
+    const completeCourse = {
       title: courseData.title,
       shortDesription: courseData.shortDesription || courseData.short_description,
       description: courseData.description || courseData.shortDesription || courseData.short_description,
@@ -21,14 +21,22 @@ export const createDirectCourse = async (courseData) => {
       format: courseData.format || courseData.courseType || 'recorded',
       modulesCount: courseData.modulesCount || courseData.modules_count || 4,
       instructor_id: courseData.instructor_id,
+      // Add missing fields
+      color: courseData.color || '#630000', // Default red color
+      icon: courseData.icon || 'FaBook', // Default book icon
+      promo_video_url: courseData.promoVideoUrl || courseData.promo_video_url || '',
+      estimatedDuration: courseData.estimatedDuration || '10 hours',
+      totalLectures: courseData.totalLectures || courseData.modulesCount * 3 || 12,
+      status: courseData.status || 'published',
       faqs: courseData.faqs || [],
-      tags: courseData.tags || []
+      tags: courseData.tags || [],
+      lectures: courseData.lectures || []
     };
 
     // Make the API call
     const response = await axios.post(
       `${getBackendUrl()}/api/direct-courses/create`,
-      simplifiedCourse
+      completeCourse
     );
 
     console.log('Direct course creation response:', response.data);

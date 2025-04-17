@@ -27,6 +27,8 @@ const courseSchema = yup.object({
   color: yup.string().required('Color is required'),
   icon: yup.string().required('Icon is required'),
   promoVideoUrl: yup.string().url('Invalid URL format').optional(),
+  estimatedDuration: yup.string().required('Estimated duration is required'),
+  totalLectures: yup.number().optional(),
   lectures: yup
     .array()
     .of(
@@ -76,10 +78,12 @@ const CreateCourseForm = () => {
       level: '',
       language: '',
       modulesCount: 0,
-      courseType: '',
-      color: '#ffffff',
-      icon: '',
+      courseType: 'recorded',
+      color: '#630000', // Default red color
+      icon: 'FaBook', // Default book icon
       promoVideoUrl: '',
+      estimatedDuration: '10 hours', // Default duration
+      totalLectures: 0, // Will be calculated based on modules
       lectures: [],
       faqs: [],
       tags: [],

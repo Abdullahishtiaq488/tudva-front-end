@@ -165,11 +165,14 @@ const CourseCard = ({
         {/* <Image src={image} className="" alt="card image" /> */}
 
         <>
-          <div className="d-flex justify-content-center align-items-center h-100 opacity-75" style={{ backgroundColor: `${color}`, color: 'white' }}>
-            {/* <FaNodeJs size={'sm'} className="w-25" /> */}
-            <DynamicIcon iconName={`${icon}`} />
-
-
+          <div
+            className="d-flex justify-content-center align-items-center h-100 opacity-75"
+            style={{
+              backgroundColor: color || '#630000',
+              color: 'white'
+            }}
+          >
+            <DynamicIcon iconName={icon || 'FaBook'} />
           </div>
         </>
 

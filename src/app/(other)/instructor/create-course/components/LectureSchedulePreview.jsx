@@ -5,19 +5,19 @@ import { Card, Table, Badge, Button, Spinner } from 'react-bootstrap';
 import { FaCalendarAlt, FaClock, FaVideo, FaChalkboardTeacher } from 'react-icons/fa';
 import { useFormContext } from 'react-hook-form';
 
-const LectureSchedulePreview = ({ 
-  selectedDay, 
-  selectedSlots, 
-  startDate, 
-  courseType 
+const LectureSchedulePreview = ({
+  selectedDay,
+  selectedSlots,
+  startDate,
+  courseType
 }) => {
   const { watch } = useFormContext();
   const [scheduleData, setScheduleData] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
-  
+
   // Watch lecture groups to calculate total lectures
   const lectureGroups = watch('lectureGroups') || [];
-  
+
   // Time slots reference
   const timeSlots = [
     { id: 1, time: '9:00 AM - 9:45 AM' },
@@ -32,7 +32,7 @@ const LectureSchedulePreview = ({
     { id: 10, time: '3:45 PM - 4:30 PM' },
     { id: 11, time: '4:30 PM - 5:15 PM' },
   ];
-  
+
   // Days of the week for date calculation
   const daysOfWeek = {
     'sunday': 0,
@@ -52,7 +52,7 @@ const LectureSchedulePreview = ({
     }
 
     setIsLoading(true);
-    
+
     try {
       // Flatten lectures from all groups
       const allLectures = [];
@@ -61,12 +61,12 @@ const LectureSchedulePreview = ({
           group.lectures.forEach(lecture => {
             allLectures.push({
               ...lecture,
-              moduleName: group.title || 'Unnamed Module'
+              moduleName: group.lectureHeading || 'Unnamed Module'
             });
           });
         }
       });
-      
+
       // Sort lectures by module and then by sort order
       allLectures.sort((a, b) => {
         if (a.moduleName !== b.moduleName) {
@@ -74,26 +74,26 @@ const LectureSchedulePreview = ({
         }
         return (a.sortOrder || 0) - (b.sortOrder || 0);
       });
-      
+
       // Calculate schedule
       const schedule = [];
       const startDateObj = new Date(startDate);
       const targetDayOfWeek = daysOfWeek[selectedDay];
-      
+
       // Adjust start date to the selected day of week
       while (startDateObj.getDay() !== targetDayOfWeek) {
         startDateObj.setDate(startDateObj.getDate() + 1);
       }
-      
+
       // Generate schedule for each lecture
       let currentDate = new Date(startDateObj);
       let slotIndex = 0;
-      
+
       for (let i = 0; i < allLectures.length; i++) {
         const lecture = allLectures[i];
         const slotId = selectedSlots[slotIndex];
         const slot = timeSlots.find(s => s.id === slotId);
-        
+
         schedule.push({
           id: i + 1,
           date: new Date(currentDate),
@@ -101,17 +101,17 @@ const LectureSchedulePreview = ({
           slotId: slotId,
           slotTime: slot ? slot.time : 'Unknown time'
         });
-        
+
         // Move to next slot
         slotIndex = (slotIndex + 1) % selectedSlots.length;
-        
+
         // If we've used all slots for this day, move to next week
         if (slotIndex === 0) {
           currentDate = new Date(currentDate);
           currentDate.setDate(currentDate.getDate() + 7);
         }
       }
-      
+
       setScheduleData(schedule);
     } catch (error) {
       console.error('Error generating schedule preview:', error);
@@ -176,7 +176,7 @@ const LectureSchedulePreview = ({
                   <td>{item.date.toLocaleDateString()}</td>
                   <td>{item.slotTime}</td>
                   <td>{item.lecture.moduleName}</td>
-                  <td>{item.lecture.title || 'Unnamed Lecture'}</td>
+                  <td>{item.lecture.topicName || item.lecture.title || 'Unnamed Lecture'}</td>
                   <td>
                     {index === 0 ? (
                       <Badge bg="warning" className="me-1">Demo</Badge>

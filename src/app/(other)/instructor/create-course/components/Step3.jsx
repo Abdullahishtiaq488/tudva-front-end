@@ -23,6 +23,55 @@ const Step3 = ({ goToNextStep, goBackToPreviousStep }) => {
   const componentRef = useRef(null);
   const [isVisible, setIsVisible] = useState(false);
 
+  // Function to update the course in localStorage
+  const updateCourseInLocalStorage = () => {
+    const currentGroups = getValues("lectureGroups");
+
+    // Get all lectures from all groups
+    const allLectures = [];
+    currentGroups.forEach(group => {
+      if (group.lectures && group.lectures.length > 0) {
+        group.lectures.forEach(lecture => {
+          allLectures.push({
+            id: lecture.id,
+            moduleName: group.lectureHeading, // Use the group heading as module name
+            topicName: lecture.topicName,
+            description: lecture.description,
+            videoUrl: lecture.videoUrl,
+            sortOrder: lecture.sortOrder
+          });
+        });
+      }
+    });
+
+    // Get the current course from localStorage
+    const currentCourseStr = localStorage.getItem('current_course');
+    if (currentCourseStr) {
+      const currentCourse = JSON.parse(currentCourseStr);
+
+      // Update the course with the lectures
+      const updatedCourse = {
+        ...currentCourse,
+        lectures: allLectures,
+        updatedAt: new Date().toISOString()
+      };
+
+      // Save the updated course back to localStorage
+      localStorage.setItem('current_course', JSON.stringify(updatedCourse));
+      console.log('Updated current course with lectures:', updatedCourse);
+
+      // Also update the course in the courses array
+      const coursesStr = localStorage.getItem('courses');
+      if (coursesStr) {
+        const courses = JSON.parse(coursesStr);
+        const updatedCourses = courses.map(course =>
+          course.id === currentCourse.id ? updatedCourse : course
+        );
+        localStorage.setItem('courses', JSON.stringify(updatedCourses));
+      }
+    }
+  };
+
   useEffect(() => {
     const observer = new IntersectionObserver(
       ([entry]) => {
@@ -65,6 +114,9 @@ const Step3 = ({ goToNextStep, goBackToPreviousStep }) => {
     if (updatedGroups[groupIndex] && updatedGroups[groupIndex].lectures) {
       updatedGroups[groupIndex].lectures.splice(lectureIndex, 1);
       setValue("lectureGroups", updatedGroups);
+
+      // Update the course in localStorage
+      updateCourseInLocalStorage();
     } else {
       console.warn(`Lecture at index ${lectureIndex} in group ${groupIndex} not found.`);
     }
@@ -73,8 +125,21 @@ const Step3 = ({ goToNextStep, goBackToPreviousStep }) => {
   const handleUpdateLectureGroupName = (groupIndex, newName) => {
     const currentGroups = getValues("lectureGroups");
     const updatedGroups = [...currentGroups];
+
+    // Update the module name
     updatedGroups[groupIndex].lectureHeading = newName;
+
+    // Also update the moduleName in all lectures in this group
+    if (updatedGroups[groupIndex].lectures && updatedGroups[groupIndex].lectures.length > 0) {
+      updatedGroups[groupIndex].lectures.forEach(lecture => {
+        lecture.moduleName = newName;
+      });
+    }
+
     setValue("lectureGroups", updatedGroups);
+
+    // Also update the current course in localStorage
+    updateCourseInLocalStorage();
   };
 
   const handleTopicDataSubmit = (data) => {
@@ -107,38 +172,7 @@ const Step3 = ({ goToNextStep, goBackToPreviousStep }) => {
     setValue("lectureGroups", updatedGroups);
 
     // Update the current course in localStorage
-    const currentCourseStr = localStorage.getItem('current_course');
-    if (currentCourseStr) {
-      const currentCourse = JSON.parse(currentCourseStr);
-
-      // Get all lectures from all groups
-      const allLectures = [];
-      updatedGroups.forEach(group => {
-        if (group.lectures && group.lectures.length > 0) {
-          group.lectures.forEach(lecture => {
-            allLectures.push({
-              id: lecture.id,
-              moduleName: lecture.moduleName,
-              topicName: lecture.topicName,
-              description: lecture.description,
-              videoUrl: lecture.videoUrl,
-              sortOrder: lecture.sortOrder
-            });
-          });
-        }
-      });
-
-      // Update the course with the lectures
-      const updatedCourse = {
-        ...currentCourse,
-        lectures: allLectures,
-        updatedAt: new Date().toISOString()
-      };
-
-      // Save the updated course back to localStorage
-      localStorage.setItem('current_course', JSON.stringify(updatedCourse));
-      console.log('Updated current course with lectures:', updatedCourse);
-    }
+    updateCourseInLocalStorage();
 
     setShowAddTopicModal(false);
     toast.success(`Lecture "${topicName}" added to ${updatedGroups[currentGroupIndex].lectureHeading}`);
@@ -176,68 +210,8 @@ const Step3 = ({ goToNextStep, goBackToPreviousStep }) => {
       formData.append("lectures", JSON.stringify(lecturesMetadata));
 
       try {
-        // Get the current course from localStorage
-        const currentCourseStr = localStorage.getItem('current_course');
-        if (!currentCourseStr) {
-          toast.error("Course data not found. Please start from Step 1.");
-          return;
-        }
-
-        // Parse the current course
-        const currentCourse = JSON.parse(currentCourseStr);
-
-        console.log('Current course before processing lectures:', currentCourse);
-        console.log('Lecture groups from form:', lectureGroups);
-
-        // Process lectures data
-        const processedLectures = [];
-
-        // For each lecture, create a data object
-        lectureGroups.forEach((group) => {
-          if (group.lectures && group.lectures.length > 0) {
-            group.lectures.forEach((lecture, lectureIndex) => {
-              // Use the existing lecture ID if available, otherwise generate a new one
-              const lectureId = lecture.id || `lecture_${Date.now()}_${lectureIndex}`;
-
-              const lectureData = {
-                id: lectureId,
-                moduleName: group.lectureHeading,
-                topicName: lecture.topicName,
-                description: lecture.description,
-                sortOrder: lectureIndex,
-                // Use the actual cloud storage URL if available, not a blob URL
-                videoUrl: lecture.url || lecture.videoUrl || '',
-                // Don't create blob URLs here - they're temporary and won't persist
-                videoFile: lecture.videoFile || '',
-              };
-              processedLectures.push(lectureData);
-            });
-          }
-        });
-
-        console.log('Processed lectures:', processedLectures);
-
-        // Update the course with lectures data
-        const updatedCourse = {
-          ...currentCourse,
-          lectures: processedLectures,
-          updatedAt: new Date().toISOString()
-        };
-
-        console.log('Updated course with lectures:', updatedCourse);
-
-        // Save the updated course back to localStorage
-        localStorage.setItem('current_course', JSON.stringify(updatedCourse));
-
-        // Also update the course in the courses array
-        const coursesStr = localStorage.getItem('courses');
-        if (coursesStr) {
-          const courses = JSON.parse(coursesStr);
-          const updatedCourses = courses.map(course =>
-            course.id === courseId ? updatedCourse : course
-          );
-          localStorage.setItem('courses', JSON.stringify(updatedCourses));
-        }
+        // Make sure all lecture data is properly saved
+        updateCourseInLocalStorage();
 
         toast.success("Step 3 data updated successfully!");
         goToNextStep();

@@ -65,7 +65,7 @@ const Step1 = ({ goToNextStep }) => {
 
   const handleNext = async () => {
     // 1. Validate Step 1 fields:
-    const isValid = await trigger(["title", "shortDescription", "description", "category", "level", "language", "modulesCount"]);
+    const isValid = await trigger(["title", "shortDescription", "description", "category", "level", "language", "modulesCount", "estimatedDuration", "promoVideoUrl"]);
 
     if (isValid) {
       // 2. Get all the values from the form:
@@ -84,6 +84,11 @@ const Step1 = ({ goToNextStep }) => {
         modulesCount: formData.modulesCount,
         description: formData.description,
         courseType: formData.courseType || 'recorded', // Add course type
+        estimatedDuration: formData.estimatedDuration || '10 hours',
+        totalLectures: formData.modulesCount * 3, // Estimate 3 lectures per module
+        promoVideoUrl: formData.promoVideoUrl || '',
+        color: '#630000', // Default color, will be updated in Step 2
+        icon: 'FaBook', // Default icon, will be updated in Step 2
       }
 
       try {
@@ -285,6 +290,37 @@ const Step1 = ({ goToNextStep }) => {
           {errors.modulesCount && <div className="invalid-feedback">{errors.modulesCount.message}</div>}
         </Col>
 
+        {/* Estimated Duration */}
+        <Col md={6}>
+          <label className="form-label">Estimated Duration</label>
+          <input
+            className={`form-control ${errors.estimatedDuration ? 'is-invalid' : ''}`}
+            type="text"
+            placeholder="e.g., 10 hours, 4 weeks"
+            {...register("estimatedDuration", {
+              required: "Estimated duration is required"
+            })}
+          />
+          {errors.estimatedDuration && <div className="invalid-feedback">{errors.estimatedDuration.message}</div>}
+        </Col>
+
+        {/* Promo Video URL */}
+        <Col md={12}>
+          <label className="form-label">Promotional Video URL</label>
+          <input
+            className={`form-control ${errors.promoVideoUrl ? 'is-invalid' : ''}`}
+            type="url"
+            placeholder="YouTube or other video URL"
+            {...register("promoVideoUrl", {
+              pattern: {
+                value: /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be|vimeo\.com)\/.+/i,
+                message: "Please enter a valid YouTube or Vimeo URL"
+              }
+            })}
+          />
+          {errors.promoVideoUrl && <div className="invalid-feedback">{errors.promoVideoUrl.message}</div>}
+        </Col>
+
         {/* Description (ReactQuill) */}
         <Col xs={12}>
           <label className="form-label">Add description <span className='text-danger'>*</span></label>
@@ -308,7 +344,7 @@ const Step1 = ({ goToNextStep }) => {
         {/* Next Button */}
         <div className="d-flex justify-content-end mt-5">
           <Button type="button" variant="primary" className="mb-0" onClick={handleNext}>
-            Create Course & Next
+            {getValues('courseId') ? 'Update & Next' : 'Create Course & Next'}
           </Button>
         </div>
       </Row>
