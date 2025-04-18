@@ -7,12 +7,12 @@ export const metadata = {
 };
 const CourseDetailModule = () => {
   return <>
-      <TopNavigationBar />
+      
       <main>
         <Intro />
         <CourseDetail />
       </main>
-      <Footer className="bg-light" />
+      
     </>;
 };
 export default CourseDetailModule;

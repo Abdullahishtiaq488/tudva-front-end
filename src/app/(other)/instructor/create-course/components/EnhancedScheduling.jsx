@@ -6,12 +6,12 @@ import { FaClock, FaCalendarAlt, FaInfoCircle } from 'react-icons/fa';
 import { useFormContext } from 'react-hook-form';
 import { toast } from 'react-hot-toast';
 
-const EnhancedScheduling = ({ 
-  selectedDay, 
-  setSelectedDay, 
-  slotsPerDay, 
-  setSlotsPerDay, 
-  selectedSlots, 
+const EnhancedScheduling = ({
+  selectedDay,
+  setSelectedDay,
+  slotsPerDay,
+  setSlotsPerDay,
+  selectedSlots,
   setSelectedSlots,
   startDate,
   setStartDate,
@@ -20,10 +20,10 @@ const EnhancedScheduling = ({
   courseType
 }) => {
   const { setValue, getValues, watch } = useFormContext();
-  
+
   // Watch lecture groups to calculate total lectures
   const lectureGroups = watch('lectureGroups') || [];
-  
+
   // Days of the week
   const daysOfWeek = [
     { id: 'monday', name: 'Monday' },
@@ -57,27 +57,70 @@ const EnhancedScheduling = ({
       return total + (group.lectures ? group.lectures.length : 0);
     }, 0);
 
-    // Calculate weeks needed
-    const lecturesPerWeek = slotsPerDay;
-    const weeksNeeded = Math.ceil(totalLectures / lecturesPerWeek);
+    // If no lectures, use at least 1 to ensure proper scheduling
+    const actualLectures = Math.max(totalLectures, 1);
+
+    // Calculate weeks needed based on selected slots per day
+    // Each lecture needs one slot, and we can only use slots on the selected day each week
+    const lecturesPerWeek = selectedSlots.length || 1; // Use at least 1 slot if none selected
+    const weeksNeeded = Math.ceil(actualLectures / lecturesPerWeek);
 
     // Calculate end date
     if (startDate) {
       const start = new Date(startDate);
       const end = new Date(start);
-      end.setDate(start.getDate() + (weeksNeeded * 7));
+
+      // Add weeks needed (minimum 1 week)
+      const weeksToAdd = Math.max(weeksNeeded, 1);
+
+      // For a single lecture with one slot, we still need at least 1 week
+      // For multiple lectures, calculate based on the selected day and slots
+      if (selectedDay) {
+        // Get the day index (0 = Sunday, 1 = Monday, etc.)
+        const dayIndex = {
+          'sunday': 0,
+          'monday': 1,
+          'tuesday': 2,
+          'wednesday': 3,
+          'thursday': 4,
+          'friday': 5,
+          'saturday': 6
+        }[selectedDay];
+
+        // Calculate days to add to reach the selected day of the week
+        const currentDayIndex = start.getDay();
+        let daysToAdd = (dayIndex - currentDayIndex + 7) % 7;
+
+        // If we're already on the selected day, start from next week
+        if (daysToAdd === 0) {
+          daysToAdd = 7;
+        }
+
+        // Create a new date for the first session
+        const firstSessionDate = new Date(start);
+        firstSessionDate.setDate(start.getDate() + daysToAdd);
+
+        // Calculate the end date based on the number of weeks needed
+        end.setTime(firstSessionDate.getTime());
+        end.setDate(end.getDate() + ((weeksToAdd - 1) * 7));
+      } else {
+        // Fallback to simple calculation if no day selected
+        end.setDate(start.getDate() + (weeksToAdd * 7));
+      }
+
       setEstimatedEndDate(end.toISOString().split('T')[0]);
+      console.log(`Calculated end date: ${end.toISOString()}, Weeks needed: ${weeksNeeded}, Total lectures: ${totalLectures}`);
 
       return {
-        totalLectures,
-        weeksNeeded,
+        totalLectures: actualLectures,
+        weeksNeeded: weeksToAdd,
         endDate: end
       };
     }
-    
+
     return {
-      totalLectures,
-      weeksNeeded,
+      totalLectures: actualLectures,
+      weeksNeeded: Math.max(weeksNeeded, 1),
       endDate: null
     };
   };
@@ -109,9 +152,21 @@ const EnhancedScheduling = ({
 
   // Update form values when scheduling changes
   useEffect(() => {
+    // Only calculate if we have the minimum required data
+    if (!startDate || selectedSlots.length === 0) {
+      console.log('Missing required scheduling data, skipping calculation');
+      return;
+    }
+
     const { totalLectures, weeksNeeded, endDate } = calculateEstimatedEndDate();
-    
-    // Update form values
+
+    // Validate the calculated values
+    if (!weeksNeeded || weeksNeeded < 1 || !totalLectures) {
+      console.warn('Invalid schedule calculation results:', { totalLectures, weeksNeeded });
+      return;
+    }
+
+    // Update form values with validated data
     setValue('scheduling', {
       day: selectedDay,
       slotsPerDay,
@@ -122,12 +177,22 @@ const EnhancedScheduling = ({
       totalLectures,
       regenerateSchedules: true // Always regenerate schedules when updating
     });
+
+    console.log('Updated scheduling data:', {
+      day: selectedDay,
+      slotsPerDay,
+      selectedSlots,
+      startDate: startDate,
+      endDate: endDate ? endDate.toISOString().split('T')[0] : null,
+      totalWeeks: weeksNeeded,
+      totalLectures
+    });
   }, [selectedDay, slotsPerDay, selectedSlots, lectureGroups, startDate, setValue]);
 
   return (
     <div className="enhanced-scheduling mb-4">
       <h5 className="mb-3">Course Schedule</h5>
-      
+
       {/* Course Type Info */}
       <div className={`alert ${courseType === 'live' ? 'alert-info' : 'alert-warning'} d-flex align-items-center`}>
         <FaInfoCircle className="me-2" />
@@ -139,7 +204,7 @@ const EnhancedScheduling = ({
           )}
         </div>
       </div>
-      
+
       <Row className="g-3 mb-4">
         {/* Start Date */}
         <Col md={6}>
@@ -249,8 +314,8 @@ const EnhancedScheduling = ({
             </Col>
             <Col md={6}>
               <p className="mb-2">
-                <strong>Selected Slots:</strong> {selectedSlots.length > 0 ? 
-                  selectedSlots.map(id => timeSlots.find(slot => slot.id === id)?.time).join(', ') : 
+                <strong>Selected Slots:</strong> {selectedSlots.length > 0 ?
+                  selectedSlots.map(id => timeSlots.find(slot => slot.id === id)?.time).join(', ') :
                   'None'}
               </p>
               <p className="mb-2">

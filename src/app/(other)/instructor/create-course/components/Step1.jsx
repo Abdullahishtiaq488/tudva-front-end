@@ -14,8 +14,9 @@ const Step1 = ({ goToNextStep }) => {
   const { register, formState: { errors }, control, setValue, trigger, getValues } = useFormContext();
   const searchParams = useSearchParams();
 
-  // Load existing course data if editing
+  // Load existing course data if editing or from localStorage if available
   useEffect(() => {
+    // First check if we're editing an existing course
     const courseId = searchParams.get('courseId');
     if (courseId) {
       try {
@@ -40,16 +41,22 @@ const Step1 = ({ goToNextStep }) => {
         // Set form values
         setValue('courseId', courseId);
         setValue('title', course.title || '');
-        setValue('shortDescription', course.shortDesription || course.short_description || '');
+        setValue('short_description', course.short_description || '');
         setValue('description', course.description || '');
         setValue('category', course.category || '');
         setValue('level', course.level || '');
         setValue('language', course.language || '');
-        setValue('modulesCount', course.modulesCount || course.modules_count || 4);
+        // Ensure we use the actual modules_count from the course
+        const moduleCount = course.modules_count || course.modulesCount || 4;
+        console.log('Setting module count to:', moduleCount);
+        setValue('modulesCount', moduleCount);
         setValue('courseType', course.courseType || course.format || 'recorded');
         setValue('color', course.color || '#ffffff');
         setValue('icon', course.icon || '');
-        setValue('promoVideoUrl', course.promoVideoUrl || '');
+        // Check all possible property names for promo video URL
+        const promoUrl = course.promoVideoUrl || course.promo_video_url || '';
+        console.log('Setting promo video URL to:', promoUrl);
+        setValue('promoVideoUrl', promoUrl);
 
         // Save the current course being edited
         localStorage.setItem('current_course', JSON.stringify(course));
@@ -59,13 +66,62 @@ const Step1 = ({ goToNextStep }) => {
         console.error('Error loading course for editing:', error);
         toast.error('Failed to load course for editing');
       }
+    } else {
+      // Check if there's a draft course in localStorage
+      try {
+        const draftCourse = localStorage.getItem('draft_course_step1');
+        if (draftCourse) {
+          const courseData = JSON.parse(draftCourse);
+          console.log('Found draft course data:', courseData);
+
+          // Set form values from draft
+          setValue('title', courseData.title || '');
+          setValue('shortDesription', courseData.shortDesription || courseData.shortDescription || '');
+          setValue('description', courseData.description || '');
+          setValue('category', courseData.category || '');
+          setValue('level', courseData.level || '');
+          setValue('language', courseData.language || '');
+          setValue('modulesCount', courseData.modulesCount || 4);
+          setValue('courseType', courseData.courseType || 'recorded');
+          setValue('promoVideoUrl', courseData.promoVideoUrl || '');
+          setValue('estimatedDuration', courseData.estimatedDuration || '');
+
+          toast.success('Recovered draft course data');
+        }
+      } catch (error) {
+        console.error('Error loading draft course:', error);
+      }
     }
   }, [searchParams, setValue]);
 
+  // Save draft data when form values change
+  const saveDraft = () => {
+    try {
+      const formData = getValues();
+      // Don't save if we're editing an existing course
+      if (formData.courseId) return;
+
+      // Save current form state to localStorage
+      localStorage.setItem('draft_course_step1', JSON.stringify(formData));
+      console.log('Saved draft course data:', formData);
+    } catch (error) {
+      console.error('Error saving draft course:', error);
+    }
+  };
+
+  // Auto-save draft every 5 seconds
+  useEffect(() => {
+    const interval = setInterval(saveDraft, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
 
   const handleNext = async () => {
-    // 1. Validate Step 1 fields:
-    const isValid = await trigger(["title", "shortDescription", "description", "category", "level", "language", "modulesCount", "estimatedDuration", "promoVideoUrl"]);
+    // Save draft before validation
+    saveDraft();
+
+    // 1. Validate Step 1 fields (promoVideoUrl is optional):
+    const isValid = await trigger(["title", "short_description", "description", "category", "level", "language", "modulesCount"]);
 
     if (isValid) {
       // 2. Get all the values from the form:
@@ -74,18 +130,22 @@ const Step1 = ({ goToNextStep }) => {
       // Check if we're editing an existing course
       const existingCourseId = formData.courseId;
 
+      // Calculate total lectures based on modules count
+      const lecturesPerModule = 3; // Assuming 3 lectures per module
+      const totalLectures = formData.modulesCount * lecturesPerModule;
+
       // Prepare the data for this step
       const data = {
         title: formData.title,
-        shortDesription: formData.shortDescription,
+        short_description: formData.short_description,
         category: formData.category,
         level: formData.level,
         language: formData.language,
         modulesCount: formData.modulesCount,
         description: formData.description,
-        courseType: formData.courseType || 'recorded', // Add course type
-        estimatedDuration: formData.estimatedDuration || '10 hours',
-        totalLectures: formData.modulesCount * 3, // Estimate 3 lectures per module
+        courseType: formData.courseType || 'recorded',
+        estimatedDuration: formData.estimatedDuration,
+        totalLectures: totalLectures,
         promoVideoUrl: formData.promoVideoUrl || '',
         color: '#630000', // Default color, will be updated in Step 2
         icon: 'FaBook', // Default icon, will be updated in Step 2
@@ -195,16 +255,16 @@ const Step1 = ({ goToNextStep }) => {
         <Col xs={12}>
           <label className="form-label">Short description <span className='text-danger'>*</span></label>
           <textarea
-            className={`form-control ${errors.shortDescription ? 'is-invalid' : ''}`}
+            className={`form-control ${errors.short_description ? 'is-invalid' : ''}`}
             rows={2}
             placeholder="Enter keywords"
-            {...register("shortDescription", {
+            {...register("short_description", {
               required: "Short description is required",
               minLength: { value: 10, message: "Short description must be at least 10 characters" },
               maxLength: { value: 200, message: "Short description cannot exceed 200 characters" }
             })}
           />
-          {errors.shortDescription && <div className="invalid-feedback">{errors.shortDescription.message}</div>}
+          {errors.short_description && <div className="invalid-feedback">{errors.short_description.message}</div>}
         </Col>
 
         {/* Course Category */}
@@ -275,7 +335,7 @@ const Step1 = ({ goToNextStep }) => {
 
         {/* Count of Modules */}
         <Col md={6}>
-          <label className="form-label">Count of Modules</label>
+          <label className="form-label">Count of Modules <span className='text-danger'>*</span></label>
           <input
             className={`form-control ${errors.modulesCount ? 'is-invalid' : ''}`}
             type="number"
@@ -284,33 +344,30 @@ const Step1 = ({ goToNextStep }) => {
               valueAsNumber: true,
               required: "Number of modules is required",
               min: { value: 1, message: "Must have at least 1 module" },
-              max: { value: 100, message: "Cannot have more than 100 modules" }
+              max: { value: 100, message: "Cannot have more than 100 modules" },
+              onChange: (e) => {
+                // Calculate total lectures based on modules count
+                const modulesCount = parseInt(e.target.value) || 0;
+                const lecturesPerModule = 3; // Assuming 3 lectures per module
+                const totalLectures = modulesCount * lecturesPerModule;
+
+                // Store total lectures for later use
+                setValue('totalLectures', totalLectures);
+              }
             })}
           />
           {errors.modulesCount && <div className="invalid-feedback">{errors.modulesCount.message}</div>}
         </Col>
 
-        {/* Estimated Duration */}
-        <Col md={6}>
-          <label className="form-label">Estimated Duration</label>
-          <input
-            className={`form-control ${errors.estimatedDuration ? 'is-invalid' : ''}`}
-            type="text"
-            placeholder="e.g., 10 hours, 4 weeks"
-            {...register("estimatedDuration", {
-              required: "Estimated duration is required"
-            })}
-          />
-          {errors.estimatedDuration && <div className="invalid-feedback">{errors.estimatedDuration.message}</div>}
-        </Col>
 
-        {/* Promo Video URL */}
+
+        {/* Promo Video URL (Optional) */}
         <Col md={12}>
-          <label className="form-label">Promotional Video URL</label>
+          <label className="form-label">Promotional Video URL <span className='text-muted'>(Optional)</span></label>
           <input
             className={`form-control ${errors.promoVideoUrl ? 'is-invalid' : ''}`}
             type="url"
-            placeholder="YouTube or other video URL"
+            placeholder="YouTube or other video URL (optional)"
             {...register("promoVideoUrl", {
               pattern: {
                 value: /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be|vimeo\.com)\/.+/i,
@@ -318,6 +375,7 @@ const Step1 = ({ goToNextStep }) => {
               }
             })}
           />
+          <small className="form-text text-muted">You can add a promotional video later if you don't have one now</small>
           {errors.promoVideoUrl && <div className="invalid-feedback">{errors.promoVideoUrl.message}</div>}
         </Col>
 

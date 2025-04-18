@@ -107,6 +107,12 @@ const AddTopic = ({ show, onHide, onDataSubmit }) => {
   const [showVideoUpload, setShowVideoUpload] = useState(true);
 
   const handleVideoUploadComplete = (data) => {
+    // Check if video duration is available and within limits
+    if (data.duration && data.duration > 45 * 60) { // 45 minutes in seconds
+      toast.error('Video exceeds the maximum duration of 45 minutes. Please upload a shorter video.');
+      return;
+    }
+
     setVideoData(data);
     setShowVideoUpload(false);
     toast.success('Video ready for submission');
@@ -122,16 +128,18 @@ const AddTopic = ({ show, onHide, onDataSubmit }) => {
     onDataSubmit({
       topicName: data.topicName,
       description: data.description,
-      // Store the actual cloud storage URL, not the local blob URL
-      videoUrl: videoData.url, // This should be the cloud storage URL from the backend
+      // Store the actual cloud storage URL from Supabase
+      videoUrl: videoData.url, // This is the Supabase storage URL from the backend
       // We don't need to pass the file object anymore since we have the cloud URL
       // But keep it for backward compatibility
       videoFile: videoData.file,
     });
 
     console.log('Video data being submitted:', {
-      url: videoData.url,
-      previewUrl: videoData.previewUrl
+      url: videoData.url, // Supabase storage URL
+      previewUrl: videoData.previewUrl, // Local preview URL
+      type: typeof videoData.url,
+      isSupabaseUrl: videoData.url?.includes('supabase')
     });
 
     // Reset form and state

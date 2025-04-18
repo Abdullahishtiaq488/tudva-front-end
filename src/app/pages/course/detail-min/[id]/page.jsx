@@ -36,6 +36,43 @@ const DetailMinimal = () => {
 
     console.log('Formatting course data:', courseData);
 
+    // Extract scheduling data
+    let schedulingData = null;
+
+    // Check if scheduling data is available directly
+    if (courseData.scheduling) {
+      schedulingData = courseData.scheduling;
+      console.log('Found scheduling data directly in course:', schedulingData);
+    }
+    // Check if scheduling data is available in schedules array
+    else if (courseData.schedules && courseData.schedules.length > 0) {
+      const schedule = courseData.schedules[0];
+      schedulingData = {
+        day: schedule.day,
+        slotsPerDay: schedule.slotsPerDay,
+        selectedSlots: schedule.selectedSlots,
+        startDate: schedule.startDate,
+        endDate: schedule.endDate,
+        totalWeeks: schedule.totalWeeks
+      };
+      console.log('Extracted scheduling data from schedules array:', schedulingData);
+    }
+    // Try to get scheduling data from localStorage
+    else {
+      try {
+        const localCourseStr = localStorage.getItem(`course_${courseData.id}`);
+        if (localCourseStr) {
+          const localCourse = JSON.parse(localCourseStr);
+          if (localCourse.scheduling) {
+            schedulingData = localCourse.scheduling;
+            console.log('Found scheduling data in localStorage:', schedulingData);
+          }
+        }
+      } catch (error) {
+        console.error('Error accessing localStorage for scheduling data:', error);
+      }
+    }
+
     // Format the course data to match the expected structure
     const formattedData = {
       course: {
@@ -60,28 +97,110 @@ const DetailMinimal = () => {
           bio: 'Experienced instructor with expertise in this subject.',
           id: courseData.instructor_id || 'local_instructor'
         },
-        rating: courseData.averageRating || 4.5,
+        rating: courseData.averageRating || 0,
         enrolled: courseData.enrollmentCount || 0,
         price: courseData.price || 0,
-        duration: '10 weeks',
-        certificate: true,
+        duration: courseData.estimatedDuration || 'Not specified',
+        certificate: courseData.certificate !== undefined ? courseData.certificate : true,
         createdAt: courseData.createdAt || new Date().toISOString(),
         updatedAt: courseData.updatedAt || new Date().toISOString(),
-        status: courseData.status || 'published'
+        status: courseData.status || 'published',
+        // Add scheduling data if available
+        seminarDay: courseData.seminarDay || (schedulingData ? {
+          id: schedulingData.day,
+          name: schedulingData.day.charAt(0).toUpperCase() + schedulingData.day.slice(1)
+        } : null),
+        slots: courseData.slots || []
       },
       lectures: Array.isArray(courseData.lectures) ? courseData.lectures : [],
       faqs: Array.isArray(courseData.faqs) ? courseData.faqs : [],
       tags: Array.isArray(courseData.tags) ? courseData.tags : [],
       reviews: Array.isArray(courseData.reviews) ? courseData.reviews : [],
-      averageRating: courseData.averageRating || 5.0,
-      reviewCount: courseData.reviewCount || 0
+      averageRating: courseData.averageRating || 0,
+      reviewCount: courseData.reviewCount || 0,
+      // Add scheduling data to the top level
+      scheduling: schedulingData
     };
+
+    // Save the formatted data to localStorage for backup
+    try {
+      localStorage.setItem(`course_${courseData.id}`, JSON.stringify({
+        ...courseData,
+        scheduling: schedulingData
+      }));
+      console.log('Saved course with scheduling data to localStorage');
+    } catch (error) {
+      console.error('Error saving course to localStorage:', error);
+    }
 
     console.log('Formatted course data:', formattedData);
 
-    // Create modules from lectures
-    if (Array.isArray(courseData.lectures) && courseData.lectures.length > 0) {
-      // Group lectures by module
+    // Create modules from lectures or use provided modules
+    if (courseData.modules && typeof courseData.modules === 'object' && !Array.isArray(courseData.modules)) {
+      // If modules is already in the correct format, use it directly
+      formattedData.modules = courseData.modules;
+      console.log('Using existing modules object:', formattedData.modules);
+    } else if (courseData.modulesList && Array.isArray(courseData.modulesList) && courseData.modulesList.length > 0) {
+      // If modulesList is available (new format), use it to create the modules map
+      console.log('Using modulesList to create modules:', courseData.modulesList);
+      const moduleMap = {};
+
+      courseData.modulesList.forEach((module) => {
+        const moduleName = module.title || `Module ${module.moduleNumber || 1}`;
+        moduleMap[moduleName] = [];
+
+        // Find lectures for this module
+        if (Array.isArray(courseData.lectures)) {
+          const moduleLectures = courseData.lectures.filter(lecture =>
+            lecture.moduleId === module.id || lecture.moduleName === moduleName
+          );
+
+          moduleLectures.forEach(lecture => {
+            moduleMap[moduleName].push({
+              id: lecture.id,
+              title: lecture.title || lecture.topicName || 'Untitled Lecture',
+              description: lecture.description || '',
+              duration: lecture.durationMinutes ? `${lecture.durationMinutes}:00` : '45:00',
+              videoUrl: lecture.videoUrl || lecture.videoFile || lecture.video_url || 'https://www.youtube.com/embed/tXHviS-4ygo',
+              watched: false,
+              isDemoLecture: lecture.isDemoLecture || false,
+              isAccessible: lecture.isAccessible || false
+            });
+          });
+        }
+      });
+
+      formattedData.modules = moduleMap;
+      console.log('Created modules from modulesList:', formattedData.modules);
+    } else if (Array.isArray(courseData.modules) && courseData.modules.length > 0) {
+      // If modules is an array, convert it to the expected format
+      console.log('Converting modules array to map:', courseData.modules);
+      const moduleMap = {};
+      courseData.modules.forEach((module, index) => {
+        const moduleName = module.title || `Module ${index + 1}`;
+        moduleMap[moduleName] = [];
+
+        // Add lectures from this module if they exist
+        if (Array.isArray(module.lectures)) {
+          module.lectures.forEach(lecture => {
+            moduleMap[moduleName].push({
+              id: lecture.id,
+              title: lecture.title || 'Untitled Lecture',
+              description: lecture.description || '',
+              duration: lecture.durationMinutes ? `${lecture.durationMinutes}:00` : '45:00',
+              videoUrl: lecture.videoUrl || lecture.videoFile || lecture.video_url || 'https://www.youtube.com/embed/tXHviS-4ygo',
+              watched: false,
+              isDemoLecture: lecture.isDemoLecture || false,
+              isAccessible: lecture.isAccessible || false
+            });
+          });
+        }
+      });
+
+      formattedData.modules = moduleMap;
+    } else if (Array.isArray(courseData.lectures) && courseData.lectures.length > 0) {
+      // Group lectures by module if no modules are provided
+      console.log('Grouping lectures by moduleName:', courseData.lectures);
       const moduleMap = {};
       courseData.lectures.forEach(lecture => {
         const moduleName = lecture.moduleName || 'Module 1';
@@ -92,25 +211,28 @@ const DetailMinimal = () => {
           id: lecture.id,
           title: lecture.topicName || lecture.title || 'Untitled Lecture',
           description: lecture.description || '',
-          duration: '10:00',
+          duration: lecture.durationMinutes ? `${lecture.durationMinutes}:00` : '45:00',
           videoUrl: lecture.videoUrl || lecture.videoFile || lecture.video_url || 'https://www.youtube.com/embed/tXHviS-4ygo',
-          watched: false
+          watched: false,
+          isDemoLecture: lecture.isDemoLecture || false,
+          isAccessible: lecture.isAccessible || false
         });
       });
 
       formattedData.modules = moduleMap;
+      console.log('Created modules from lectures:', formattedData.modules);
     } else {
-      // Create sample modules if no lectures exist
+      // If no modules or lectures exist, create a single empty module
+      console.log('No modules or lectures found, creating empty module structure');
       formattedData.modules = {
-        'Module 1': [
-          { id: 1, title: 'Introduction', duration: '10:00', videoUrl: 'https://www.youtube.com/embed/tXHviS-4ygo', watched: false },
-          { id: 2, title: 'Getting Started', duration: '15:00', videoUrl: 'https://www.youtube.com/embed/tXHviS-4ygo', watched: false }
-        ],
-        'Module 2': [
-          { id: 3, title: 'Basic Concepts', duration: '12:00', videoUrl: 'https://www.youtube.com/embed/tXHviS-4ygo', watched: false },
-          { id: 4, title: 'Advanced Topics', duration: '18:00', videoUrl: 'https://www.youtube.com/embed/tXHviS-4ygo', watched: false }
-        ]
+        'Module 1': []
       };
+
+      // Show error in console for debugging
+      console.error('Course has no modules or lectures. This may indicate incomplete course data.');
+
+      // Set error state to inform user
+      setError('This course has no content yet. Please check back later.');
     }
 
     // Set the course data
@@ -155,73 +277,85 @@ const DetailMinimal = () => {
         // Try to get the course directly by ID
         let course = null;
 
+        // First try to fetch directly from the backend API
         try {
-          // Try to fetch the course directly from the backend
-          console.log('Fetching course directly by ID:', courseId);
+          console.log('Fetching course directly from backend API:', courseId);
           const response = await axiosInstance.get(`/api/courses/${courseId}`);
 
-          console.log('Backend response:', response.data);
-
           if (response.data && response.data.success && response.data.course) {
-            console.log('Successfully fetched course from backend:', response.data.course);
+            console.log('Successfully fetched course from backend API:', response.data.course);
             course = response.data.course;
-          } else if (response.data && response.data.course) {
-            console.log('Course found in response but not in success format:', response.data.course);
-            course = response.data.course;
-          } else {
-            console.warn('Course not found in backend, trying file-based API');
-            // Try file-based API for a single course
-            try {
-              console.log('Trying to fetch course directly from file-based API');
-              const fileResponse = await axiosInstance.get(`/api/file-courses/${courseId}`);
 
-              if (fileResponse.data && fileResponse.data.course) {
-                console.log('Successfully fetched course from file-based API:', fileResponse.data.course);
-                course = fileResponse.data.course;
-              } else {
-                console.warn('Course not found in file-based API, trying to get all courses');
-                // Fall back to getting all courses
-                const fileCourses = await getAllFileCourses();
-                console.log('Got all file courses:', fileCourses.length);
-                course = fileCourses.find(c => c.id === courseId);
-
-                if (course) {
-                  console.log('Found course in all file courses:', course);
-                }
-              }
-            } catch (fileApiError) {
-              console.warn('Error fetching from file-based API:', fileApiError);
-              // Fall back to getting all courses
-              const fileCourses = await getAllFileCourses();
-              course = fileCourses.find(c => c.id === courseId);
+            // If we have modules in the response, add them to the course
+            if (response.data.modules) {
+              course.modules = response.data.modules;
             }
+          }
+        } catch (backendError) {
+          console.warn('Error fetching from backend API:', backendError);
+        }
+
+        // If not found in backend API, try file-based API
+        if (!course) {
+          try {
+            console.log('Trying to fetch course from file-based API');
+            const fileResponse = await axiosInstance.get(`/api/file-courses/${courseId}`);
+
+            if (fileResponse.data && fileResponse.data.course) {
+              console.log('Successfully fetched course from file-based API:', fileResponse.data.course);
+              course = fileResponse.data.course;
+            }
+          } catch (fileApiError) {
+            console.warn('Error fetching from file-based API:', fileApiError);
+          }
+        }
+
+        // If still not found, try direct API
+        if (!course) {
+          try {
+            console.log('Trying to fetch course from direct API');
+            const directResponse = await axiosInstance.get(`/api/direct-courses/${courseId}`);
+
+            if (directResponse.data && directResponse.data.course) {
+              console.log('Successfully fetched course from direct API:', directResponse.data.course);
+              course = directResponse.data.course;
+            }
+          } catch (directApiError) {
+            console.warn('Error fetching from direct API:', directApiError);
+          }
+        }
+
+        // If still not found, try getting all courses from different APIs
+        if (!course) {
+          try {
+            // Try all file courses
+            const fileCourses = await getAllFileCourses();
+            course = fileCourses.find(c => c.id === courseId);
 
             if (!course) {
-              console.warn('Course not found in file-based API, trying direct API');
-              // Try direct API
+              // Try all direct courses
               const directCourses = await getAllDirectCourses();
               course = directCourses.find(c => c.id === courseId);
 
               if (!course) {
-                console.warn('Course not found in direct API, trying simplified API');
-                // Try simplified API
+                // Try all simple courses
                 const simpleCourses = await getAllSimpleCourses();
                 course = simpleCourses.find(c => c.id === courseId);
               }
             }
+          } catch (allCoursesError) {
+            console.warn('Error fetching all courses:', allCoursesError);
           }
-        } catch (apiError) {
-          console.warn('Error fetching from APIs, falling back to localStorage:', apiError);
-          // Fall back to localStorage if APIs fail
+        }
+
+        // If still not found, try localStorage as last resort
+        if (!course) {
           try {
             // Try courses in localStorage
             const coursesStr = localStorage.getItem('courses');
             if (coursesStr) {
               const courses = JSON.parse(coursesStr);
               course = courses.find(c => c.id === courseId);
-              if (course) {
-                console.log('Found course in localStorage courses:', course);
-              }
             }
 
             // If not found, try fileCourses in localStorage
@@ -230,9 +364,6 @@ const DetailMinimal = () => {
               if (fileCoursesStr) {
                 const fileCourses = JSON.parse(fileCoursesStr);
                 course = fileCourses.find(c => c.id === courseId);
-                if (course) {
-                  console.log('Found course in localStorage fileCourses:', course);
-                }
               }
             }
 
@@ -242,9 +373,6 @@ const DetailMinimal = () => {
               if (directCoursesStr) {
                 const directCourses = JSON.parse(directCoursesStr);
                 course = directCourses.find(c => c.id === courseId);
-                if (course) {
-                  console.log('Found course in localStorage directCourses:', course);
-                }
               }
             }
 
@@ -253,7 +381,6 @@ const DetailMinimal = () => {
               const specificCourseStr = localStorage.getItem(`course_${courseId}`);
               if (specificCourseStr) {
                 course = JSON.parse(specificCourseStr);
-                console.log('Found specific course in localStorage:', course);
               }
             }
           } catch (localStorageError) {
@@ -336,7 +463,6 @@ const DetailMinimal = () => {
   if (!course) {
     return (
       <>
-        <TopNavigationBar />
         <div className="container my-5 py-5 text-center">
           <h2>Course Not Found</h2>
           <p>{error || 'The course you are looking for could not be found. Please try again later or check the URL.'}</p>
@@ -350,19 +476,16 @@ const DetailMinimal = () => {
             Browse Courses
           </button>
         </div>
-        <Footer className="bg-light" />
       </>
     );
   }
 
   return <>
-    <TopNavigationBar />
     <main>
       <CourseBanner course={course} />
       <BannerVideo course={course} selectedVideo={currentVideo} onVideoSelect={handleVideoSelect} />
       <CourseDetails course={course} onVideoSelect={handleVideoSelect} />
     </main>
-    <Footer className="bg-light" />
   </>;
 };
 export default DetailMinimal;

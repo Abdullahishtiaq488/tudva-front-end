@@ -15,6 +15,14 @@ export const getAuthHeader = () => {
 };
 
 /**
+ * Get the authentication token
+ * @returns {string|null} The JWT token or null if not found
+ */
+export const getAuthToken = () => {
+  return authService.getToken();
+};
+
+/**
  * Check if the user is authenticated
  * @returns {boolean} Whether the user is authenticated
  */

@@ -1,20 +1,34 @@
 'use client';
 
-import React from 'react';
-import Image from 'next/image';
+import React, { useEffect, useState } from 'react';
 
-const FallbackLoading = ({ message = 'Loading...' }) => {
+const RedirectLoading = ({ message = 'Redirecting...', destination = '', delay = 2000 }) => {
+  const [countdown, setCountdown] = useState(Math.ceil(delay / 1000));
+  
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCountdown(prev => Math.max(0, prev - 1));
+    }, 1000);
+    
+    return () => clearInterval(timer);
+  }, []);
+  
   return (
-    <div className="fallback-loading">
+    <div className="redirect-loading">
       <div className="loading-container">
         <div className="spinner-border text-primary" role="status">
           <span className="visually-hidden">Loading...</span>
         </div>
         <p className="mt-3 text-primary">{message}</p>
+        {destination && (
+          <p className="text-muted small">
+            Redirecting to {destination} in {countdown} seconds...
+          </p>
+        )}
       </div>
 
       <style jsx>{`
-        .fallback-loading {
+        .redirect-loading {
           position: fixed;
           top: 0;
           left: 0;
@@ -26,7 +40,7 @@ const FallbackLoading = ({ message = 'Loading...' }) => {
           background-color: rgba(255, 255, 255, 0.9);
           z-index: 9999;
         }
-
+        
         .loading-container {
           text-align: center;
           padding: 2rem;
@@ -34,7 +48,7 @@ const FallbackLoading = ({ message = 'Loading...' }) => {
           background-color: white;
           box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
         }
-
+        
         .spinner-border {
           width: 3rem;
           height: 3rem;
@@ -44,4 +58,4 @@ const FallbackLoading = ({ message = 'Loading...' }) => {
   );
 };
 
-export default FallbackLoading;
+export default RedirectLoading;

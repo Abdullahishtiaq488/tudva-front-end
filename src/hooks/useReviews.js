@@ -239,7 +239,7 @@ export const useReviews = (courseId) => {
     }
   }, [courseId]);
 
-  // Submit a new review - try direct-reviews API first, then file-based API, then regular API
+  // Submit a new review - try ALL APIs in parallel to ensure data consistency
   const submitReview = useCallback(async (reviewData) => {
     try {
       setIsLoading(true);
@@ -259,47 +259,54 @@ export const useReviews = (courseId) => {
       const userName = user.fullName || user.name;
       console.log('Using authenticated user for review submission:', { userId, userName });
 
-      // Try direct-reviews API first
-      try {
-        console.log('Trying direct-reviews API for submitting review...');
-        response = await createReviewDirect(courseId, reviewData.content, reviewData.rating, userId, userName);
-        if (response.success) {
-          console.log('Successfully submitted review with direct-reviews API');
-          success = true;
-        }
-      } catch (directError) {
-        console.warn('Direct-reviews API failed for submit:', directError.message);
+      // Try all APIs in parallel to ensure data consistency
+      const apiPromises = [
+        // Direct-reviews API (Next.js API route)
+        createReviewDirect(courseId, reviewData.content, reviewData.rating, userId, userName)
+          .catch(error => {
+            console.warn('Direct-reviews API failed for submit:', error.message);
+            return { success: false, error: error.message };
+          }),
 
-        // If direct-reviews API fails, try file-based API
-        try {
-          console.log('Trying file-based API for submitting review...');
-          response = await createReviewFile(courseId, reviewData.content, reviewData.rating, userId, userName);
-          if (response.success) {
-            console.log('Successfully submitted review with file-based API');
-            success = true;
-          }
-        } catch (fileError) {
-          console.warn('File-based API failed for submit:', fileError.message);
+        // File-based API (Backend file system)
+        createReviewFile(courseId, reviewData.content, reviewData.rating, userId, userName)
+          .catch(error => {
+            console.warn('File-based API failed for submit:', error.message);
+            return { success: false, error: error.message };
+          }),
 
-          // If file-based API fails, try regular API
-          try {
-            console.log('Trying regular API for submitting review...');
-            response = await createReviewRegular({
-              ...reviewData,
-              course_id: courseId,
-              userId: userId, // Include userId in the request
-              userName: userName // Include userName in the request
-            });
-            if (response.success) {
-              console.log('Successfully submitted review with regular API');
-              success = true;
-            }
-          } catch (regularError) {
-            console.warn('Regular API failed for submit:', regularError.message);
-            // If all APIs fail, throw the direct error as it's likely more relevant
-            throw directError;
-          }
-        }
+        // Regular API (Database)
+        createReviewRegular({
+          ...reviewData,
+          course_id: courseId,
+          userId: userId, // Include userId in the request
+          userName: userName // Include userName in the request
+        }).catch(error => {
+          console.warn('Regular API failed for submit:', error.message);
+          return { success: false, error: error.message };
+        })
+      ];
+
+      // Wait for all APIs to complete (or fail)
+      const results = await Promise.allSettled(apiPromises);
+
+      // Check if any API succeeded
+      const successfulResults = results.filter(result =>
+        result.status === 'fulfilled' && result.value && result.value.success
+      );
+
+      if (successfulResults.length > 0) {
+        // At least one API succeeded
+        success = true;
+        response = successfulResults[0].value;
+        console.log(`Successfully submitted review with ${successfulResults.length} APIs`);
+      } else {
+        // All APIs failed
+        const errors = results
+          .filter(result => result.status === 'rejected' || (result.value && !result.value.success))
+          .map(result => result.status === 'rejected' ? result.reason : result.value.error);
+
+        throw new Error(`All APIs failed: ${errors.join(', ')}`);
       }
 
       if (success && response.success) {

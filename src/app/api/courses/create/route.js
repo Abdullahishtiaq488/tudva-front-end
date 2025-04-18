@@ -55,8 +55,8 @@ export async function POST(request) {
     // Make request to backend
     console.log(`Sending request to ${getBackendUrl()}/api/courses`);
 
-    // Simplify the payload to reduce size
-    const simplifiedBody = {
+    // Create a complete payload with all necessary fields
+    const completeBody = {
       title: body.title,
       shortDesription: body.shortDesription,
       description: body.description,
@@ -64,19 +64,33 @@ export async function POST(request) {
       level: body.level,
       language: body.language,
       modulesCount: body.modulesCount,
-      format: body.format || 'recorded'
+      format: body.format || 'recorded',
+      color: body.color || '#630000',
+      icon: body.icon || 'FaBook',
+      promoVideoUrl: body.promoVideoUrl || '',
+      estimatedDuration: body.estimatedDuration || body.modulesCount * 45, // 45 minutes per module
+      totalLectures: body.totalLectures || body.modulesCount * 3 // Assume 3 lectures per module
     };
 
-    // Add FAQs and tags if they exist but limit their size
+    // Add modules and lectures if they exist
+    if (body.modules && Array.isArray(body.modules)) {
+      completeBody.modules = body.modules;
+    }
+
+    if (body.lectures && Array.isArray(body.lectures)) {
+      completeBody.lectures = body.lectures;
+    }
+
+    // Add FAQs and tags if they exist
     if (body.faqs && Array.isArray(body.faqs)) {
-      simplifiedBody.faqs = body.faqs.slice(0, 10); // Limit to 10 FAQs
+      completeBody.faqs = body.faqs;
     }
 
     if (body.tags && Array.isArray(body.tags)) {
-      simplifiedBody.tags = body.tags.slice(0, 20); // Limit to 20 tags
+      completeBody.tags = body.tags;
     }
 
-    console.log('Simplified request body:', JSON.stringify(simplifiedBody, null, 2));
+    console.log('Complete request body:', JSON.stringify(completeBody, null, 2));
 
     // Simplify the auth header to avoid issues
     const simpleAuthHeader = authHeader.startsWith('Bearer ') ?
@@ -87,7 +101,7 @@ export async function POST(request) {
 
     const backendResponse = await axios.post(
       `${getBackendUrl()}/api/courses`,
-      simplifiedBody,
+      completeBody,
       {
         headers: {
           'Authorization': simpleAuthHeader,

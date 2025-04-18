@@ -43,13 +43,32 @@ const Step2 = ({ goToNextStep, goBackToPreviousStep }) => {
       setAvailableIcons(customIcons);
       setUseCustomIcons(true); // Default to custom icons
 
-      // If we have a previously selected icon, set it
+      // First check if we have a current course being edited
       const currentCourseStr = localStorage.getItem('current_course');
       if (currentCourseStr) {
         const currentCourse = JSON.parse(currentCourseStr);
         if (currentCourse.icon) {
           setSelectedIcon(currentCourse.icon);
           setValue('icon', currentCourse.icon);
+        }
+        if (currentCourse.color) {
+          setSelectedColor(currentCourse.color);
+          setValue('color', currentCourse.color);
+        }
+      } else {
+        // Check if there's a draft for step 2
+        const draftStep2 = localStorage.getItem('draft_course_step2');
+        if (draftStep2) {
+          const draftData = JSON.parse(draftStep2);
+          if (draftData.icon) {
+            setSelectedIcon(draftData.icon);
+            setValue('icon', draftData.icon);
+          }
+          if (draftData.color) {
+            setSelectedColor(draftData.color);
+            setValue('color', draftData.color);
+          }
+          toast.success('Recovered draft media settings');
         }
       }
     } catch (error) {
@@ -67,9 +86,34 @@ const Step2 = ({ goToNextStep, goBackToPreviousStep }) => {
     ? availableIcons.filter(iconName => iconName.toLowerCase().includes(searchTerm.toLowerCase()))
     : iconArray.filter(([iconName, iconComponent]) => iconName.toLowerCase().includes(searchTerm.toLowerCase()));
 
+  // Save draft data to localStorage
+  const saveDraft = () => {
+    try {
+      const formData = getValues();
+      // Don't save if we're editing an existing course
+      if (formData.courseId) return;
+
+      // Save current form state to localStorage
+      localStorage.setItem('draft_course_step2', JSON.stringify({
+        color: selectedColor,
+        icon: selectedIcon
+      }));
+      console.log('Saved draft course media data');
+    } catch (error) {
+      console.error('Error saving draft course media:', error);
+    }
+  };
+
+  // Auto-save draft every 5 seconds
+  useEffect(() => {
+    const interval = setInterval(saveDraft, 5000);
+    return () => clearInterval(interval);
+  }, [selectedColor, selectedIcon]);
+
   const handleColorChange = (newColor) => {
     setSelectedColor(newColor);
     setValue('color', newColor); // Update form value
+    saveDraft(); // Save draft immediately on color change
   };
 
   const handleIconSelect = (iconName) => {
@@ -89,17 +133,28 @@ const Step2 = ({ goToNextStep, goBackToPreviousStep }) => {
       localStorage.setItem('current_course', JSON.stringify(updatedCourse));
       console.log('Updated current course with icon:', updatedCourse);
     }
+
+    saveDraft(); // Save draft immediately on icon selection
   };
 
   const handleNext = async () => {
+    // Save draft before validation
+    saveDraft();
+
     const isValid = await trigger(['color', 'icon']); // Validate color and icon
     if (isValid) {
       const { color, icon } = getValues(); // Get only color and icon
       // Get the courseId from the form data (it was stored in Step1)
       const { courseId } = getValues();
+
+      // If we don't have a courseId, we're creating a new course
       if (!courseId) {
-        toast.error("Course ID is missing. Please start from Step 1.");
-        return; // Stop execution if courseId is missing
+        // Get the current course from localStorage
+        const currentCourseStr = localStorage.getItem('current_course');
+        if (!currentCourseStr) {
+          toast.error("Course data not found. Please start from Step 1.");
+          return;
+        }
       }
 
       // Use localStorage instead of making an API call

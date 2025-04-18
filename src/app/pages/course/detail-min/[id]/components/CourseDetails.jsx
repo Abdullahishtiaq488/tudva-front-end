@@ -6,6 +6,7 @@ import avatar5 from '@/assets/images/avatar/05.jpg';
 import AllPlayList from "./AllPlayList";
 import { useState } from "react";
 import DebugVideoUrl from "./DebugVideoUrl";
+import EnrollButton from "@/components/enrollment/EnrollButton";
 
 const CourseDetails = ({ course, onVideoSelect }) => {
   const [selectedVideo, setSelectedVideo] = useState(null);
@@ -59,6 +60,7 @@ const CourseDetails = ({ course, onVideoSelect }) => {
                   </div>
                 </div>
                 <div className="d-flex mt-2 mt-sm-0">
+                  <EnrollButton course={course?.course} variant="primary" size="sm" className="me-2 mb-0" />
                   <Button variant="danger-soft" size="sm" className="mb-0" href="#">Follow</Button>
                   <Dropdown className="ms-2">
                     <DropdownToggle size="sm" className="btn arrow-none border-0 py-2 mb-0 btn-info-soft small" role="button" id="dropdownShare" aria-expanded="false">

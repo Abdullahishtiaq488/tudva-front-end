@@ -14,6 +14,18 @@ import { createFileCourse, updateFileCourse } from '@/utils/fileCourseApi';
 import { syncCourse } from '@/utils/syncUtils';
 import EnhancedScheduling from './EnhancedScheduling';
 import LectureSchedulePreview from './LectureSchedulePreview';
+import ButtonLoader from '@/components/ButtonLoader';
+import RedirectLoading from '@/components/RedirectLoading';
+
+// Helper function to calculate estimated duration from lectures
+const calculateEstimatedDuration = (lectures) => {
+  if (!lectures || !Array.isArray(lectures) || lectures.length === 0) {
+    return 0;
+  }
+
+  // Each lecture is 45 minutes by default
+  return lectures.length * 45;
+};
 
 const Step4 = ({ goBackToPreviousStep, onSubmit }) => {
   const { register, formState: { errors }, control, setValue, getValues, watch } = useFormContext();
@@ -29,6 +41,8 @@ const Step4 = ({ goBackToPreviousStep, onSubmit }) => {
   const [estimatedEndDate, setEstimatedEndDate] = useState(null);
   const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [redirecting, setRedirecting] = useState(false);
+  const [currentCourse, setCurrentCourse] = useState(null);
 
   // Watch the number of lectures to calculate end date
   const lectureGroups = watch('lectureGroups') || [];
@@ -184,6 +198,9 @@ const Step4 = ({ goBackToPreviousStep, onSubmit }) => {
         // Set current course in localStorage for other steps to use
         localStorage.setItem('current_course', JSON.stringify(courseData));
 
+        // Set current course in state
+        setCurrentCourse(courseData);
+
         // Set all form values
         setValue('title', courseData.title);
         setValue('shortDescription', courseData.shortDesription || '');
@@ -219,7 +236,18 @@ const Step4 = ({ goBackToPreviousStep, onSubmit }) => {
           }));
           setValue('faqs', faqs);
         } else {
-          setValue('faqs', []);
+          // Try alternative property names
+          if (courseData.faq && Array.isArray(courseData.faq)) {
+            console.log('Loading FAQs from alternative property:', courseData.faq);
+            const faqs = courseData.faq.map(faq => ({
+              id: faq.id || uuidv4(),
+              question: faq.question,
+              answer: faq.answer
+            }));
+            setValue('faqs', faqs);
+          } else {
+            setValue('faqs', []);
+          }
         }
 
         // Handle tags if they exist
@@ -232,7 +260,17 @@ const Step4 = ({ goBackToPreviousStep, onSubmit }) => {
           }));
           setValue('tags', tags);
         } else {
-          setValue('tags', []);
+          // Try alternative property names
+          if (courseData.tag && Array.isArray(courseData.tag)) {
+            console.log('Loading tags from alternative property:', courseData.tag);
+            const tags = courseData.tag.map(tag => ({
+              id: tag.id || uuidv4(),
+              tagName: tag.tagName || tag.tag_name || ''
+            }));
+            setValue('tags', tags);
+          } else {
+            setValue('tags', []);
+          }
         }
 
         setValue('courseId', courseId);
@@ -354,6 +392,13 @@ const Step4 = ({ goBackToPreviousStep, onSubmit }) => {
         return;
       }
 
+      // Validate required fields
+      if (!formData.estimatedDuration) {
+        toast.error('Please enter an estimated duration for the course', { id: 'create-course' });
+        setIsSubmitting(false);
+        return;
+      }
+
       // Validate scheduling data
       if (!selectedDay) {
         toast.error('Please select a day for the course', { id: 'create-course' });
@@ -394,13 +439,16 @@ const Step4 = ({ goBackToPreviousStep, onSubmit }) => {
       // Create the minimal course object for backend submission
       const minimalCourse = {
         title: currentCourse.title,
-        shortDesription: currentCourse.shortDesription,
-        description: currentCourse.description || currentCourse.shortDesription,
+        short_description: currentCourse.short_description,
+        description: currentCourse.description || currentCourse.short_description,
         category: currentCourse.category,
         level: currentCourse.level,
         language: currentCourse.language,
         modulesCount: currentCourse.modulesCount || 4,
         format: currentCourse.courseType || 'recorded',
+        courseType: currentCourse.courseType || 'recorded',
+        estimatedDuration: calculateEstimatedDuration(currentCourse.lectures || []),
+        totalLectures: (currentCourse.lectures || []).length,
         faqs: formData.faqs || [],
         tags: formData.tags || []
       };
@@ -497,10 +545,14 @@ const Step4 = ({ goBackToPreviousStep, onSubmit }) => {
             // Don't block the redirect if sync fails
           }
 
-          // Redirect to manage course page
+          // Show success message and set redirecting state
+          toast.success(isEditing ? 'Course updated successfully!' : 'Course created successfully!', { id: 'create-course' });
+          setRedirecting(true);
+
+          // Redirect to manage course page after delay
           setTimeout(() => {
             router.push('/instructor/manage-course');
-          }, 1000);
+          }, 2000);
 
           return;
         } else {
@@ -528,7 +580,8 @@ const Step4 = ({ goBackToPreviousStep, onSubmit }) => {
             color: currentCourse.color,
             icon: currentCourse.icon,
             promoVideoUrl: currentCourse.promoVideoUrl,
-            lectures: currentCourse.lectures || []
+            lectures: currentCourse.lectures || [],
+            token: token // Include token for authentication
           });
         } else {
           console.log('Creating new course with direct API');
@@ -539,7 +592,6 @@ const Step4 = ({ goBackToPreviousStep, onSubmit }) => {
 
         if (result.success) {
           // Success! Update localStorage and redirect
-          toast.success(isEditing ? 'Course updated successfully!' : 'Course created successfully!', { id: 'create-course' });
 
           // Create the updated course object
           const updatedCourse = {
@@ -562,10 +614,14 @@ const Step4 = ({ goBackToPreviousStep, onSubmit }) => {
           // Also update current_course in localStorage
           localStorage.setItem('current_course', JSON.stringify(updatedCourse));
 
-          // Redirect to manage course page
+          // Show success message and set redirecting state
+          toast.success(isEditing ? 'Course updated successfully!' : 'Course created successfully!', { id: 'create-course' });
+          setRedirecting(true);
+
+          // Redirect to manage course page after delay
           setTimeout(() => {
             router.push('/instructor/manage-course');
-          }, 1000);
+          }, 2000);
 
           return;
         } else {
@@ -593,7 +649,8 @@ const Step4 = ({ goBackToPreviousStep, onSubmit }) => {
             color: currentCourse.color,
             icon: currentCourse.icon,
             promoVideoUrl: currentCourse.promoVideoUrl,
-            lectures: currentCourse.lectures || []
+            lectures: currentCourse.lectures || [],
+            token: token // Include token for authentication
           });
         } else {
           console.log('Creating new course with simplified API');
@@ -604,7 +661,6 @@ const Step4 = ({ goBackToPreviousStep, onSubmit }) => {
 
         if (result.success) {
           // Success! Update localStorage and redirect
-          toast.success(isEditing ? 'Course updated successfully!' : 'Course created successfully!', { id: 'create-course' });
 
           // Create the updated course object
           const updatedCourse = {
@@ -627,10 +683,14 @@ const Step4 = ({ goBackToPreviousStep, onSubmit }) => {
           // Also update current_course in localStorage
           localStorage.setItem('current_course', JSON.stringify(updatedCourse));
 
-          // Redirect to manage course page
+          // Show success message and set redirecting state
+          toast.success(isEditing ? 'Course updated successfully!' : 'Course created successfully!', { id: 'create-course' });
+          setRedirecting(true);
+
+          // Redirect to manage course page after delay
           setTimeout(() => {
             router.push('/instructor/manage-course');
-          }, 1000);
+          }, 2000);
 
           return;
         } else {
@@ -640,17 +700,24 @@ const Step4 = ({ goBackToPreviousStep, onSubmit }) => {
         console.error('Simplified API error:', simplifiedApiError);
       }
 
-      // Try the authenticated endpoint as fallback
+      // Try the no-auth endpoint as fallback
       try {
-        console.log('Trying authenticated endpoint...');
+        console.log('Trying no-auth endpoint...');
         const backendUrl = 'http://localhost:3001';
-        const response = await fetch(`${backendUrl}/api/courses`, {
+        const response = await fetch(`${backendUrl}/api/courses/no-auth`, {
           method: 'POST',
           headers: {
-            'Authorization': token.startsWith('Bearer ') ? token : `Bearer ${token}`,
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify(minimalCourse),
+          body: JSON.stringify({
+            ...minimalCourse,
+            estimatedDuration: typeof minimalCourse.estimatedDuration === 'string' ? minimalCourse.estimatedDuration : '10 hours',
+            color: currentCourse.color,
+            icon: currentCourse.icon,
+            promoVideoUrl: currentCourse.promoVideoUrl,
+            lectures: currentCourse.lectures || [],
+            scheduling: schedulingData
+          }),
         });
 
         const data = await response.json();
@@ -658,7 +725,6 @@ const Step4 = ({ goBackToPreviousStep, onSubmit }) => {
 
         if (response.ok && (data.success || data.course)) {
           // Success! Update localStorage and redirect
-          toast.success('Course created successfully!', { id: 'create-course' });
 
           // Create the updated course object
           const updatedCourse = {
@@ -677,10 +743,14 @@ const Step4 = ({ goBackToPreviousStep, onSubmit }) => {
           // Also update current_course in localStorage
           localStorage.setItem('current_course', JSON.stringify(updatedCourse));
 
-          // Redirect to manage course page
+          // Show success message and set redirecting state
+          toast.success('Course created successfully!', { id: 'create-course' });
+          setRedirecting(true);
+
+          // Redirect to manage course page after delay
           setTimeout(() => {
             router.push('/instructor/manage-course');
-          }, 1000);
+          }, 2000);
 
           return;
         } else {
@@ -710,12 +780,13 @@ const Step4 = ({ goBackToPreviousStep, onSubmit }) => {
 
         if (response.ok && (data.success || data.course)) {
           // Success! Update localStorage and redirect
-          toast.success('Course created successfully!', { id: 'create-course' });
+          // Show success message and set redirecting state
+          setRedirecting(true);
 
-          // Redirect to manage course page
+          // Redirect to manage course page after delay
           setTimeout(() => {
             router.push('/instructor/manage-course');
-          }, 1000);
+          }, 2000);
         } else {
           toast.error(data.error || 'Failed to create course', { id: 'create-course' });
         }
@@ -748,6 +819,10 @@ const Step4 = ({ goBackToPreviousStep, onSubmit }) => {
         // Save to localStorage and sync with backend
         await addCourse(mockCourse);
 
+        // Show success message and set redirecting state
+        setRedirecting(true);
+
+        // Redirect to manage course page after delay
         setTimeout(() => {
           router.push('/instructor/manage-course');
         }, 2000);
@@ -763,6 +838,46 @@ const Step4 = ({ goBackToPreviousStep, onSubmit }) => {
       <h4>Additional information</h4>
       <hr />
       <Row className=" g-4">
+        {/* Estimated Duration Section */}
+        <Col xs={12}>
+          <div className="bg-light border rounded p-2 p-sm-4 mb-4">
+            <h5 className="mb-3">Estimated Course Duration</h5>
+            <Row>
+              <Col md={6}>
+                <Form.Group className="mb-3">
+                  <Form.Label>Estimated Duration <span className='text-danger'>*</span></Form.Label>
+                  <Form.Control
+                    type="text"
+                    placeholder="e.g., 10 hours 30 minutes"
+                    {...register("estimatedDuration", {
+                      required: "Estimated duration is required"
+                    })}
+                  />
+                  <Form.Text className="text-muted">
+                    Enter the total estimated duration of the course (e.g., "10 hours 30 minutes")
+                  </Form.Text>
+                  {errors.estimatedDuration && <div className="text-danger">{errors.estimatedDuration.message}</div>}
+                </Form.Group>
+              </Col>
+              <Col md={6}>
+                <Form.Group className="mb-3">
+                  <Form.Label>Total Lectures</Form.Label>
+                  <Form.Control
+                    type="number"
+                    readOnly
+                    value={currentCourse?.lectures?.length || lectureGroups.reduce((total, group) => {
+                      return total + (group.lectures ? group.lectures.length : 0);
+                    }, 0) || 0}
+                  />
+                  <Form.Text className="text-muted">
+                    Based on your actual lectures (45 minutes each)
+                  </Form.Text>
+                </Form.Group>
+              </Col>
+            </Row>
+          </div>
+        </Col>
+
         {/* Course Scheduling Section */}
         <Col xs={12}>
           <div className="bg-light border rounded p-2 p-sm-4">
@@ -857,19 +972,23 @@ const Step4 = ({ goBackToPreviousStep, onSubmit }) => {
           </div>
         </Col>
         <div className="d-md-flex justify-content-between align-items-start mt-4">
-          <button className="btn btn-secondary prev-btn mb-2 mb-md-0" onClick={goBackToPreviousStep} disabled={isSubmitting}>Previous</button>
+          <button className="btn btn-secondary prev-btn mb-2 mb-md-0" onClick={goBackToPreviousStep} disabled={isSubmitting || redirecting}>Previous</button>
           <div className="text-md-end">
-            <Button className="btn btn-success mb-2 mb-sm-0" onClick={handleSubmit} disabled={isSubmitting}>
-              {isSubmitting ? (
-                <>
-                  <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" className="me-2" />
-                  Submitting...
-                </>
-              ) : (
-                'Submit a Course'
-              )}
+            <Button className="btn btn-success mb-2 mb-sm-0" onClick={handleSubmit} disabled={isSubmitting || redirecting}>
+              <ButtonLoader isLoading={isSubmitting} spinnerVariant="light">
+                Submit a Course
+              </ButtonLoader>
             </Button>
           </div>
+
+          {/* Redirect loading overlay */}
+          {redirecting && (
+            <RedirectLoading
+              message="Course created successfully!"
+              destination="Manage Courses"
+              delay={2000}
+            />
+          )}
         </div>
       </Row>
     </div>

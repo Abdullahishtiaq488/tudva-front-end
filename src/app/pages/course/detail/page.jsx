@@ -11,13 +11,13 @@ export const metadata = {
 
 const CourseDetail = () => {
   return <>
-    <TopNavigationBar />
+    
     <main>
       <PageIntro />
       <CourseDetails course={courseData} />
       <ListedCourses />
     </main>
-    <Footer className="bg-light" />
+   
   </>;
 };
 export default CourseDetail;

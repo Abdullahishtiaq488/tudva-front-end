@@ -7,11 +7,11 @@ export const metadata = {
 };
 const CourseAdvanceDetails = () => {
   return <>
-      <TopNavigationBar />
+      
       <main>
         <CourseDetails />
       </main>
-      <Footer className='bg-light' />
+    
     </>;
 };
 export default CourseAdvanceDetails;

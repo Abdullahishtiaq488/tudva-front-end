@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Card, CardBody, CardTitle, Col, Row } from "react-bootstrap";
 import { FaRegClock, FaRegStar, FaSignal, FaStar, FaStarHalfAlt, FaTable } from "react-icons/fa";
 import FavoriteButton from "@/components/favorites/FavoriteButton";
+import { normalizeCourseData, formatDuration } from "@/utils/courseDataNormalizer";
 
 
 import * as FaIcons from "react-icons/fa";
@@ -103,18 +104,25 @@ const DynamicIcon = ({ iconName }) => {
 
 
 const CourseCard = ({
-  course
+  course: rawCourse
 }) => {
+  // Normalize course data to ensure consistent field names and values
+  const course = normalizeCourseData(rawCourse);
+
   const {
     id,
     image,
     title,
     lectures,
+    totalLectures,
+    estimatedDuration,
     duration,
     rating,
     icon,
     color,
-    badge
+    badge,
+    format,
+    level
   } = course;
   // We'll use the FavoriteButton component instead of useToggle
   const router = useRouter();
@@ -202,21 +210,39 @@ const CourseCard = ({
             </span>
           </div>
           <ul className="list-inline mb-1">
-            <li className="list-inline-item h6 fw-light mb-1 mb-sm-0"><FaRegClock className="text-danger me-2" />{duration}</li>
-            <li className="list-inline-item h6 fw-light mb-1 mb-sm-0"><FaTable className="text-orange me-2" />{lectures} lectures</li>
-            <li className="list-inline-item h6 fw-light"><FaSignal className="text-success me-2" />{badge.text}</li>
+            <li className="list-inline-item h6 fw-light mb-1 mb-sm-0"><FaRegClock className="text-danger me-2" />{duration || formatDuration(estimatedDuration)}</li>
+            <li className="list-inline-item h6 fw-light mb-1 mb-sm-0"><FaTable className="text-orange me-2" />{lectures || totalLectures || 0} lectures</li>
+            <li className="list-inline-item h6 fw-light"><FaSignal className="text-success me-2" />{level || (badge && badge.text) || 'All Levels'}</li>
+            {format && (
+              <li className="list-inline-item h6 fw-light ms-2">
+                <span className={`badge ${format === 'live' ? 'bg-danger' : 'bg-success'}`}>
+                  {format.toUpperCase()}
+                </span>
+              </li>
+            )}
           </ul>
           <ul className="list-inline mb-0">
-            {Array(Math.floor(rating.star)).fill(0).map((_star, idx) => <li key={idx} className="list-inline-item me-1 small">
-              <FaStar className="text-warning" />
-            </li>)}
-            {!Number.isInteger(rating) && <li className="list-inline-item me-1 small">
-              <FaStarHalfAlt className="text-warning" />
-            </li>}
-            {rating.star < 5 && Array(5 - Math.ceil(rating.star)).fill(0).map((_star, idx) => <li key={idx} className="list-inline-item me-1 small">
-              <FaRegStar className="text-warning" />
-            </li>)}
-            <li className="list-inline-item ms-2 h6 fw-light">{rating.star}/5.0</li>
+            {rating && rating.star ? (
+              <>
+                {Array(Math.floor(rating.star)).fill(0).map((_star, idx) => <li key={idx} className="list-inline-item me-1 small">
+                  <FaStar className="text-warning" />
+                </li>)}
+                {!Number.isInteger(rating.star) && <li className="list-inline-item me-1 small">
+                  <FaStarHalfAlt className="text-warning" />
+                </li>}
+                {rating.star < 5 && Array(5 - Math.ceil(rating.star)).fill(0).map((_star, idx) => <li key={idx} className="list-inline-item me-1 small">
+                  <FaRegStar className="text-warning" />
+                </li>)}
+                <li className="list-inline-item ms-2 h6 fw-light">{rating.star}/5.0</li>
+              </>
+            ) : (
+              <>
+                {Array(5).fill(0).map((_star, idx) => <li key={idx} className="list-inline-item me-1 small">
+                  <FaStar className="text-warning" />
+                </li>)}
+                <li className="list-inline-item ms-2 h6 fw-light">5.0/5.0</li>
+              </>
+            )}
           </ul>
         </CardBody>
       </Col>

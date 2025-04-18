@@ -23,6 +23,18 @@
       "helpfulCount": 0,
       "createdAt": "2025-04-16T17:55:45.808Z",
       "updatedAt": "2025-04-16T17:55:45.808Z"
+    },
+    {
+      "id": "d8521170-cf6f-4a19-b1b0-c05868f5a292",
+      "user_id": "cf9f4239-cdc4-4955-a1cb-7d4bdce89d97",
+      "userName": "Abdullah Student",
+      "courseId": "457c27f9-2bf0-4cb7-b816-f02d3af3614f",
+      "content": "Bad course",
+      "rating": 3,
+      "isVisible": true,
+      "helpfulCount": 0,
+      "createdAt": "2025-04-17T20:48:28.640Z",
+      "updatedAt": "2025-04-17T20:48:28.640Z"
     }
   ]
 }

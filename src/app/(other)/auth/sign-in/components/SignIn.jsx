@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
@@ -10,6 +10,8 @@ import IconTextFormInput from '@/components/form/IconTextFormInput';
 import { toast } from "react-hot-toast";
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
+import ButtonLoader from '@/components/ButtonLoader';
+import RedirectLoading from '@/components/RedirectLoading';
 
 // Validation Schema (using yup)
 const loginSchema = yup.object({
@@ -20,6 +22,7 @@ const loginSchema = yup.object({
 
 const SignIn = () => {
   const [error, setError] = useState(null);
+  const [redirecting, setRedirecting] = useState(false);
   const router = useRouter();
   const { login, loading } = useAuth();
 
@@ -39,7 +42,11 @@ const SignIn = () => {
 
       if (result.success) {
         toast.success('Login successful!');
-        router.push('/');
+        setRedirecting(true);
+        // Delay redirect to show loading state
+        setTimeout(() => {
+          router.push('/');
+        }, 1500);
       } else {
         setError(result.message || 'Login failed');
         toast.error(result.message || 'Login failed');
@@ -86,11 +93,22 @@ const SignIn = () => {
       </div>
     </div>
     <div className="d-grid">
-      <button className="btn btn-primary mb-0" type="submit" disabled={loading}>
-        {loading ? 'Login...' : 'Login'}
+      <button className="btn btn-primary mb-0" type="submit" disabled={loading || redirecting}>
+        <ButtonLoader isLoading={loading} spinnerVariant="light">
+          Login
+        </ButtonLoader>
       </button>
     </div>
     {error && <div className="alert alert-danger mt-3">{error}</div>}
+
+    {/* Redirect loading overlay */}
+    {redirecting && (
+      <RedirectLoading
+        message="Login successful!"
+        destination="Dashboard"
+        delay={1500}
+      />
+    )}
   </form>;
 };
 export default SignIn;

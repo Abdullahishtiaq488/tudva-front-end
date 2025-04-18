@@ -13,6 +13,24 @@ const DynamicIcon = ({ iconName, size = 60, color = 'white', fallback }) => {
     return fallback || <FaIcons.FaBook size={size} color={color} />;
   }
 
+  // Check if iconName is a file name (ends with .png, .jpg, etc.)
+  if (typeof iconName === 'string' && iconName.match(/\.(png|jpg|jpeg|gif|svg)$/i)) {
+    // It's an image file, render an img tag
+    return (
+      <img
+        src={`/assets/all icons 96px/${iconName}`}
+        alt={iconName.replace(/\.(png|jpg|jpeg|gif|svg)$/i, '')}
+        style={{ width: `${size}px`, height: `${size}px`, objectFit: 'contain' }}
+        onError={(e) => {
+          console.error(`Failed to load icon: ${iconName}`);
+          e.target.style.display = 'none';
+          // Replace with fallback
+          e.target.parentNode.innerHTML = `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="${color}"><path d="M12 5.9c1.16 0 2.1.94 2.1 2.1s-.94 2.1-2.1 2.1S9.9 9.16 9.9 8s.94-2.1 2.1-2.1m0 9c2.97 0 6.1 1.46 6.1 2.1v1.1H5.9V17c0-.64 3.13-2.1 6.1-2.1M12 4C9.79 4 8 5.79 8 8s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm0 9c-2.67 0-8 1.34-8 4v3h16v-3c0-2.66-5.33-4-8-4z"/></svg>`;
+        }}
+      />
+    );
+  }
+
   // Try to use Font Awesome icons
   try {
     // Check if iconName is a valid Font Awesome icon name
@@ -102,10 +120,12 @@ const CourseBanner = ({ course }) => {
                 {course?.course?.estimatedDuration || '10 hours'}
               </Badge>
 
-              <Badge bg="light" text="dark" className="fs-6 px-3 py-2">
-                <FaStar className="me-2" />
-                {course?.course?.averageRating || 5.0} ({course?.course?.reviewCount || 0} reviews)
-              </Badge>
+              {course?.course?.reviewCount > 0 ? (
+                <Badge bg="light" text="dark" className="fs-6 px-3 py-2">
+                  <FaStar className="me-2" />
+                  {course?.course?.averageRating || 0} ({course?.course?.reviewCount || 0} reviews)
+                </Badge>
+              ) : null}
             </div>
 
             <div className="mt-3">

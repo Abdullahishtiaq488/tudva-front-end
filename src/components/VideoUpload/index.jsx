@@ -19,10 +19,34 @@ const VideoUpload = ({
 
   const allowedTypes = ['video/mp4', 'video/avi', 'video/quicktime'];
 
-  const handleFileChange = (e) => {
+  const [videoDuration, setVideoDuration] = useState(0);
+
+  const checkVideoDuration = (videoElement) => {
+    return new Promise((resolve, reject) => {
+      videoElement.onloadedmetadata = () => {
+        const duration = videoElement.duration;
+        setVideoDuration(duration);
+        console.log(`Video duration: ${duration} seconds`);
+
+        // Check if duration exceeds 45 minutes (2700 seconds)
+        if (duration > 2700) {
+          reject(new Error('Video exceeds the maximum duration of 45 minutes'));
+        } else {
+          resolve(duration);
+        }
+      };
+
+      videoElement.onerror = () => {
+        reject(new Error('Error loading video metadata'));
+      };
+    });
+  };
+
+  const handleFileChange = async (e) => {
     const selectedFile = e.target.files[0];
     setError('');
     setVideoPreview('');
+    setVideoDuration(0);
 
     if (!selectedFile) {
       setFile(null);
@@ -44,11 +68,23 @@ const VideoUpload = ({
       return;
     }
 
-    setFile(selectedFile);
-
     // Create a preview URL for the video
     const previewUrl = URL.createObjectURL(selectedFile);
     setVideoPreview(previewUrl);
+
+    // Create a temporary video element to check duration
+    const videoElement = document.createElement('video');
+    videoElement.src = previewUrl;
+
+    try {
+      await checkVideoDuration(videoElement);
+      setFile(selectedFile);
+    } catch (error) {
+      setError(error.message);
+      setFile(null);
+      URL.revokeObjectURL(previewUrl);
+      setVideoPreview('');
+    }
   };
 
   const handleUpload = async () => {
@@ -86,12 +122,15 @@ const VideoUpload = ({
         setProgress(100);
         toast.success('Video uploaded successfully!', { id: 'video-upload' });
 
+        console.log('Video uploaded successfully to Supabase. URL:', response.data.url);
+
         // Call the callback with the file URL and the original file
         if (onUploadComplete) {
           onUploadComplete({
-            url: response.data.url,
+            url: response.data.url, // This is the Supabase storage URL
             file: file,
-            previewUrl: videoPreview
+            previewUrl: videoPreview, // Local preview URL for UI display
+            duration: videoDuration
           });
         }
       } else {
@@ -138,7 +177,8 @@ const VideoUpload = ({
           onUploadComplete({
             url: videoPreview, // In simulation, we use the local preview URL
             file: file,
-            previewUrl: videoPreview
+            previewUrl: videoPreview,
+            duration: videoDuration
           });
         }
       }
@@ -156,7 +196,7 @@ const VideoUpload = ({
           disabled={uploading}
         />
         <Form.Text className="text-muted">
-          Max file size: {maxSizeMB}MB. Allowed types: MP4, AVI, QuickTime
+          Max file size: {maxSizeMB}MB. Max duration: 45 minutes. Allowed types: MP4, AVI, QuickTime
         </Form.Text>
       </Form.Group>
 
@@ -164,7 +204,17 @@ const VideoUpload = ({
 
       {videoPreview && (
         <div className="video-preview mb-3">
-          <p className="mb-2">Preview:</p>
+          <div className="d-flex justify-content-between align-items-center mb-2">
+            <p className="mb-0">Preview:</p>
+            {videoDuration > 0 && (
+              <p className="mb-0 text-muted">
+                Duration: {Math.floor(videoDuration / 60)}:{(videoDuration % 60).toFixed(0).padStart(2, '0')}
+                {videoDuration > 2400 && videoDuration <= 2700 && (
+                  <span className="text-warning ms-2">(Approaching 45-minute limit)</span>
+                )}
+              </p>
+            )}
+          </div>
           <video
             ref={videoRef}
             width="100%"

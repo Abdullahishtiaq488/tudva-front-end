@@ -22,11 +22,11 @@ const courseSchema = yup.object({
   category: yup.string().required('Category is required'),
   level: yup.string().required('Level is required'),
   language: yup.string().required('Language is required'),
-  modulesCount: yup.number().required('Number of modules is required').positive().integer(),
+  modulesCount: yup.number().required('Number of modules is required').positive().integer().min(1, 'At least 1 module is required'),
   courseType: yup.string().required('Course type is required').oneOf(['recorded', 'live'], 'Invalid course type'),
   color: yup.string().required('Color is required'),
   icon: yup.string().required('Icon is required'),
-  promoVideoUrl: yup.string().url('Invalid URL format').optional(),
+  promoVideoUrl: yup.string().url('Invalid URL format').optional().nullable(),
   estimatedDuration: yup.string().required('Estimated duration is required'),
   totalLectures: yup.number().optional(),
   lectures: yup
@@ -72,7 +72,7 @@ const CreateCourseForm = () => {
     resolver: yupResolver(courseSchema),
     defaultValues: {
       title: '',
-      shortDescription: '',
+      short_description: '', // Standardized field name
       description: '',
       category: '',
       level: '',

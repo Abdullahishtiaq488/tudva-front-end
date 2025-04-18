@@ -52,8 +52,8 @@ export async function POST(request) {
       }
     }
 
-    // Create a minimal course object
-    const minimalCourse = {
+    // Create a complete course object with all necessary fields
+    const completeCourse = {
       title: body.title,
       shortDesription: body.shortDesription,
       description: body.description || body.shortDesription,
@@ -61,19 +61,33 @@ export async function POST(request) {
       level: body.level,
       language: body.language,
       modulesCount: body.modulesCount || 4,
-      format: body.format || 'recorded'
+      format: body.format || 'recorded',
+      color: body.color || '#630000',
+      icon: body.icon || 'FaBook',
+      promoVideoUrl: body.promoVideoUrl || '',
+      estimatedDuration: body.estimatedDuration || body.modulesCount * 45, // 45 minutes per module
+      totalLectures: body.totalLectures || body.modulesCount * 3 // Assume 3 lectures per module
     };
+
+    // Add modules and lectures if they exist
+    if (body.modules && Array.isArray(body.modules)) {
+      completeCourse.modules = body.modules;
+    }
+
+    if (body.lectures && Array.isArray(body.lectures)) {
+      completeCourse.lectures = body.lectures;
+    }
 
     // Add FAQs and tags if they exist
     if (body.faqs && Array.isArray(body.faqs)) {
-      minimalCourse.faqs = body.faqs;
+      completeCourse.faqs = body.faqs;
     }
 
     if (body.tags && Array.isArray(body.tags)) {
-      minimalCourse.tags = body.tags;
+      completeCourse.tags = body.tags;
     }
 
-    console.log('Sending minimal course to backend:', minimalCourse);
+    console.log('Sending complete course to backend:', completeCourse);
 
     // Try the no-auth endpoint first (most reliable)
     try {
@@ -84,7 +98,7 @@ export async function POST(request) {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(minimalCourse),
+        body: JSON.stringify(completeCourse),
       });
 
       const data = await noAuthResponse.json();
@@ -117,7 +131,7 @@ export async function POST(request) {
             'Authorization': token.startsWith('Bearer ') ? token : `Bearer ${token}`,
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify(minimalCourse),
+          body: JSON.stringify(completeCourse),
         });
 
         let responseData;
@@ -154,7 +168,7 @@ export async function POST(request) {
       message: 'Course created successfully (mock)',
       course: {
         id: `mock_${Date.now()}`,
-        ...minimalCourse,
+        ...completeCourse,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         status: 'published'

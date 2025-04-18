@@ -20,25 +20,26 @@ export async function POST(request) {
 
     // Get the form data from the request
     const formData = await request.formData();
-    
+
     // Get the video file from the form data
     const videoFile = formData.get('video');
-    
+
     if (!videoFile) {
       return NextResponse.json({
         error: 'No video file provided',
         success: false
       }, { status: 400 });
     }
-    
+
     // Convert the file to a buffer
     const buffer = Buffer.from(await videoFile.arrayBuffer());
-    
+
     // Create a new FormData object for the backend request
     const backendFormData = new FormData();
     backendFormData.append('video', new Blob([buffer]), videoFile.name);
-    
+
     console.log(`Uploading video to ${getBackendUrl()}/api/courses/upload-video`);
+    console.log(`Video file name: ${videoFile.name}, size: ${buffer.length} bytes`);
 
     // Make request to backend
     const backendResponse = await axios.post(

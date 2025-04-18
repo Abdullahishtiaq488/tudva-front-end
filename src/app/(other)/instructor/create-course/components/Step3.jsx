@@ -29,19 +29,52 @@ const Step3 = ({ goToNextStep, goBackToPreviousStep }) => {
 
     // Get all lectures from all groups
     const allLectures = [];
-    currentGroups.forEach(group => {
+    const modules = {};
+
+    // Create a properly structured modules object
+    const modulesList = [];
+
+    currentGroups.forEach((group, groupIndex) => {
+      // Save module name
+      const moduleName = group.lectureHeading;
+
+      // Create a proper module object
+      const moduleObj = {
+        id: `module-${groupIndex}`,
+        title: moduleName,
+        description: `${moduleName} content`,
+        moduleNumber: groupIndex + 1,
+        lectures: []
+      };
+
+      // Add to modules object for backward compatibility
+      modules[moduleName] = [];
+
+      // Process lectures
       if (group.lectures && group.lectures.length > 0) {
-        group.lectures.forEach(lecture => {
-          allLectures.push({
-            id: lecture.id,
-            moduleName: group.lectureHeading, // Use the group heading as module name
+        group.lectures.forEach((lecture, lectureIndex) => {
+          const lectureData = {
+            id: lecture.id || `lecture-${groupIndex}-${lectureIndex}`,
+            moduleName: moduleName, // Use the group heading as module name
             topicName: lecture.topicName,
+            title: lecture.topicName, // Add title for consistency
             description: lecture.description,
             videoUrl: lecture.videoUrl,
-            sortOrder: lecture.sortOrder
-          });
+            sortOrder: lectureIndex,
+            moduleId: moduleObj.id // Reference to the module
+          };
+
+          // Add to all lectures array
+          allLectures.push(lectureData);
+
+          // Add to module's lectures array (both formats)
+          modules[moduleName].push(lectureData);
+          moduleObj.lectures.push(lectureData);
         });
       }
+
+      // Add to modules list
+      modulesList.push(moduleObj);
     });
 
     // Get the current course from localStorage
@@ -49,16 +82,18 @@ const Step3 = ({ goToNextStep, goBackToPreviousStep }) => {
     if (currentCourseStr) {
       const currentCourse = JSON.parse(currentCourseStr);
 
-      // Update the course with the lectures
+      // Update the course with the lectures and modules
       const updatedCourse = {
         ...currentCourse,
         lectures: allLectures,
+        modules: modules, // Store modules with their lectures (old format)
+        modulesList: modulesList, // Store modules in new format
         updatedAt: new Date().toISOString()
       };
 
       // Save the updated course back to localStorage
       localStorage.setItem('current_course', JSON.stringify(updatedCourse));
-      console.log('Updated current course with lectures:', updatedCourse);
+      console.log('Updated current course with lectures and modules:', updatedCourse);
 
       // Also update the course in the courses array
       const coursesStr = localStorage.getItem('courses');
@@ -69,6 +104,23 @@ const Step3 = ({ goToNextStep, goBackToPreviousStep }) => {
         );
         localStorage.setItem('courses', JSON.stringify(updatedCourses));
       }
+    }
+
+    // Also save to draft storage
+    try {
+      const formData = getValues();
+      // Don't save if we're editing an existing course
+      if (formData.courseId) return;
+
+      // Save current form state to localStorage
+      localStorage.setItem('draft_course_step3', JSON.stringify({
+        lectureGroups: currentGroups,
+        modules: modules,
+        lectures: allLectures
+      }));
+      console.log('Saved draft course curriculum data');
+    } catch (error) {
+      console.error('Error saving draft course curriculum:', error);
     }
   };
 
@@ -99,6 +151,16 @@ const Step3 = ({ goToNextStep, goBackToPreviousStep }) => {
     }
   }, [isVisible]);
 
+  // Auto-save draft every 10 seconds
+  useEffect(() => {
+    if (lectureGroupFields.length > 0) {
+      const interval = setInterval(() => {
+        updateCourseInLocalStorage();
+      }, 10000);
+      return () => clearInterval(interval);
+    }
+  }, [lectureGroupFields]);
+
   const handleAddLectureGroup = (lectureHeading) => {
     appendLectureGroup({ lectureHeading: lectureHeading, lectures: [] });
   };
@@ -126,6 +188,12 @@ const Step3 = ({ goToNextStep, goBackToPreviousStep }) => {
     const currentGroups = getValues("lectureGroups");
     const updatedGroups = [...currentGroups];
 
+    // Validate the new name
+    if (!newName || newName.trim() === '') {
+      toast.error('Module name cannot be empty');
+      return;
+    }
+
     // Update the module name
     updatedGroups[groupIndex].lectureHeading = newName;
 
@@ -138,8 +206,13 @@ const Step3 = ({ goToNextStep, goBackToPreviousStep }) => {
 
     setValue("lectureGroups", updatedGroups);
 
-    // Also update the current course in localStorage
+    // Update the current course in localStorage
     updateCourseInLocalStorage();
+
+    // Show success message
+    toast.success(`Module name updated to "${newName}"`);
+
+    console.log(`Module at index ${groupIndex} renamed to "${newName}"`);
   };
 
   const handleTopicDataSubmit = (data) => {
@@ -154,13 +227,15 @@ const Step3 = ({ goToNextStep, goBackToPreviousStep }) => {
     // Generate a unique ID for the lecture
     const lectureId = `lecture_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
 
+    console.log('Adding lecture with video URL:', videoUrl);
+
     // Create the lecture object
     const newLecture = {
       id: lectureId,
       topicName,
       description,
-      videoFile, // Store the File object for backend upload
-      videoUrl, // Store the URL for preview
+      videoFile, // Store the File object for backend upload (not needed anymore but kept for compatibility)
+      videoUrl, // Store the Supabase storage URL
       moduleName: updatedGroups[currentGroupIndex].lectureHeading, // Explicitly add moduleName here
       sortOrder: updatedGroups[currentGroupIndex].lectures.length
     };
@@ -179,6 +254,29 @@ const Step3 = ({ goToNextStep, goBackToPreviousStep }) => {
   };
 
   const handleNext = async () => {
+    // Save draft before validation
+    updateCourseInLocalStorage();
+
+    // Check if we have at least one lecture in each module
+    const { lectureGroups } = getValues();
+    let allModulesHaveLectures = true;
+    let emptyModules = [];
+
+    lectureGroups.forEach((group) => {
+      if (!group.lectures || group.lectures.length === 0) {
+        allModulesHaveLectures = false;
+        emptyModules.push(group.lectureHeading);
+      }
+    });
+
+    if (!allModulesHaveLectures) {
+      // Show warning but allow to proceed
+      const warningMessage = `The following modules have no lectures: ${emptyModules.join(', ')}. Do you want to continue anyway?`;
+      if (!confirm(warningMessage)) {
+        return;
+      }
+    }
+
     const isValid = await trigger("lectureGroups");
     if (isValid) {
       const { courseId, lectureGroups } = getValues();
@@ -187,24 +285,28 @@ const Step3 = ({ goToNextStep, goBackToPreviousStep }) => {
       const lecturesMetadata = [];
 
       lectureGroups.forEach((group, groupIndex) => {
-        group.lectures.forEach((lecture, lectureIndex) => {
-          const lectureData = {
-            moduleName: group.lectureHeading, // Ensure moduleName is included
-            topicName: lecture.topicName,
-            description: lecture.description,
-            sortOrder: lectureIndex,
-          };
-          lecturesMetadata.push(lectureData);
+        if (group.lectures) {
+          group.lectures.forEach((lecture, lectureIndex) => {
+            const lectureData = {
+              moduleName: group.lectureHeading, // Ensure moduleName is included
+              topicName: lecture.topicName,
+              description: lecture.description,
+              sortOrder: lectureIndex,
+              videoUrl: lecture.videoUrl || '', // Include the video URL
+            };
+            console.log(`Adding lecture metadata with videoUrl: ${lecture.videoUrl}`);
+            lecturesMetadata.push(lectureData);
 
-          // Append video file with a unique key per group and lecture
-          if (lecture.videoFile instanceof File) {
-            formData.append(
-              `videoFiles[${groupIndex}][${lectureIndex}]`, // Unique key for each file
-              lecture.videoFile,
-              lecture.videoFile.name
-            );
-          }
-        });
+            // Append video file with a unique key per group and lecture
+            if (lecture.videoFile instanceof File) {
+              formData.append(
+                `videoFiles[${groupIndex}][${lectureIndex}]`, // Unique key for each file
+                lecture.videoFile,
+                lecture.videoFile.name
+              );
+            }
+          });
+        }
       });
 
       formData.append("lectures", JSON.stringify(lecturesMetadata));
@@ -229,16 +331,30 @@ const Step3 = ({ goToNextStep, goBackToPreviousStep }) => {
       return; // Curriculum already exists
     }
 
-    if (!courseId) {
-      toast.error("Course ID is missing. Please provide a valid ID.");
-      return;
-    }
-
     setIsLoading(true);
     try {
       // Get the current course from localStorage
       const currentCourseStr = localStorage.getItem('current_course');
       if (!currentCourseStr) {
+        // Try to get draft data from step 1
+        const draftStep1 = localStorage.getItem('draft_course_step1');
+        if (draftStep1) {
+          const draftData = JSON.parse(draftStep1);
+          if (draftData.modulesCount) {
+            // Create modules based on the count from step 1
+            const moduleCount = parseInt(draftData.modulesCount) || 4;
+            console.log(`Creating ${moduleCount} modules from draft data`);
+
+            // Create modules
+            for (let i = 0; i < moduleCount; i++) {
+              handleAddLectureGroup(`Module ${i + 1}`);
+            }
+
+            setIsLoading(false);
+            return;
+          }
+        }
+
         toast.error("Course data not found. Please start from Step 1.");
         setIsLoading(false);
         return;
@@ -247,6 +363,10 @@ const Step3 = ({ goToNextStep, goBackToPreviousStep }) => {
       // Parse the current course
       const currentCourse = JSON.parse(currentCourseStr);
       console.log('Current course for curriculum generation:', currentCourse);
+
+      // Get the module count from the course data
+      const moduleCount = currentCourse.modulesCount || currentCourse.modules_count || 4;
+      console.log(`Module count from course data: ${moduleCount}`);
 
       // Check if the course has lectures
       if (currentCourse.lectures && currentCourse.lectures.length > 0) {
@@ -266,53 +386,100 @@ const Step3 = ({ goToNextStep, goBackToPreviousStep }) => {
 
         // Create lecture groups from the grouped lectures
         const moduleNames = Object.keys(lecturesByModule);
-        moduleNames.forEach(moduleName => {
-          // Add the lecture group
-          const groupIndex = lectureGroupFields.length;
-          handleAddLectureGroup(moduleName);
 
-          // Add the lectures to the group
-          const lectures = lecturesByModule[moduleName];
-          const currentGroups = getValues("lectureGroups");
-          const updatedGroups = [...currentGroups];
+        // If we have fewer module names than the module count, create the missing ones
+        if (moduleNames.length < moduleCount) {
+          // First create the modules we have lectures for
+          moduleNames.forEach(moduleName => {
+            // Add the lecture group
+            const groupIndex = lectureGroupFields.length;
+            handleAddLectureGroup(moduleName);
 
-          if (!updatedGroups[groupIndex]) {
-            console.warn(`Group at index ${groupIndex} not found.`);
-            return;
-          }
+            // Add the lectures to the group
+            const lectures = lecturesByModule[moduleName];
+            const currentGroups = getValues("lectureGroups");
+            const updatedGroups = [...currentGroups];
 
-          if (!updatedGroups[groupIndex].lectures) {
-            updatedGroups[groupIndex].lectures = [];
-          }
+            if (!updatedGroups[groupIndex]) {
+              console.warn(`Group at index ${groupIndex} not found.`);
+              return;
+            }
 
-          // Add each lecture to the group
-          lectures.forEach(lecture => {
-            updatedGroups[groupIndex].lectures.push({
-              id: lecture.id,
-              topicName: lecture.topicName,
-              description: lecture.description,
-              videoUrl: lecture.videoUrl,
-              moduleName: lecture.moduleName,
-              sortOrder: lecture.sortOrder
+            if (!updatedGroups[groupIndex].lectures) {
+              updatedGroups[groupIndex].lectures = [];
+            }
+
+            // Add each lecture to the group
+            lectures.forEach(lecture => {
+              updatedGroups[groupIndex].lectures.push({
+                id: lecture.id,
+                topicName: lecture.topicName,
+                description: lecture.description,
+                videoUrl: lecture.videoUrl,
+                moduleName: lecture.moduleName,
+                sortOrder: lecture.sortOrder
+              });
             });
+
+            setValue("lectureGroups", updatedGroups);
           });
 
-          setValue("lectureGroups", updatedGroups);
-        });
+          // Then create the remaining empty modules
+          const remainingModules = moduleCount - moduleNames.length;
+          for (let i = 0; i < remainingModules; i++) {
+            const moduleNumber = moduleNames.length + i + 1;
+            handleAddLectureGroup(`Module ${moduleNumber}`);
+          }
+        } else {
+          // Just create the modules we have lectures for
+          moduleNames.forEach(moduleName => {
+            // Add the lecture group
+            const groupIndex = lectureGroupFields.length;
+            handleAddLectureGroup(moduleName);
+
+            // Add the lectures to the group
+            const lectures = lecturesByModule[moduleName];
+            const currentGroups = getValues("lectureGroups");
+            const updatedGroups = [...currentGroups];
+
+            if (!updatedGroups[groupIndex]) {
+              console.warn(`Group at index ${groupIndex} not found.`);
+              return;
+            }
+
+            if (!updatedGroups[groupIndex].lectures) {
+              updatedGroups[groupIndex].lectures = [];
+            }
+
+            // Add each lecture to the group
+            lectures.forEach(lecture => {
+              updatedGroups[groupIndex].lectures.push({
+                id: lecture.id,
+                topicName: lecture.topicName,
+                description: lecture.description,
+                videoUrl: lecture.videoUrl,
+                moduleName: lecture.moduleName,
+                sortOrder: lecture.sortOrder
+              });
+            });
+
+            setValue("lectureGroups", updatedGroups);
+          });
+        }
 
         console.log('Created lecture groups from existing lectures');
       } else {
         // No existing lectures, create empty modules
-        console.log('No existing lectures found, creating empty modules');
-
-        // Get the module count from the course data
-        const moduleCount = currentCourse.modulesCount || 4; // Default to 4 if not specified
+        console.log(`No existing lectures found, creating ${moduleCount} empty modules`);
 
         // Create modules
         for (let i = 0; i < moduleCount; i++) {
           handleAddLectureGroup(`Module ${i + 1}`);
         }
       }
+
+      // Save the module structure to localStorage
+      updateCourseInLocalStorage();
     } catch (error) {
       console.error("Error fetching course:", error);
       toast.error("An error occurred while fetching the course.");
