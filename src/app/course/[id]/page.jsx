@@ -11,7 +11,7 @@ import { getAllSimpleCourses } from "@/utils/simpleCourseApi";
 import TopNavigationBar from "@/app/pages/course/detail-min/[id]/components/TopNavigationBar";
 
 // Dynamically import components that use window/browser APIs with ssr: false
-const BannerVideo = dynamic(() => import("@/app/pages/course/detail-min/[id]/components/BannerVideo"), { ssr: false });
+const BannerVideo = dynamic(() => import("./components/BannerVideo"), { ssr: false });
 const CourseDetailSkeleton = dynamic(() => import("@/app/pages/course/detail-min/[id]/components/CourseDetailSkeleton"), { ssr: false });
 const CourseBanner = dynamic(() => import("@/app/pages/course/detail-min/[id]/components/CourseBanner"), { ssr: false });
 
@@ -37,41 +37,218 @@ const CourseDetailPage = () => {
     }
 
     try {
-      // Create a structured course object
+      // Format the course data to match the expected structure
       const formattedCourse = {
         ...courseData,
-        course: courseData, // Keep the original data accessible
-        modules: courseData.modules || {},
+        course: {
+          id: courseData.id,
+          title: courseData.title || 'Untitled Course',
+          description: courseData.description || '',
+          modules_count: courseData.modulesCount || courseData.modules_count || 4,
+          short_description: courseData.shortDescription || courseData.short_description || '',
+          level: courseData.level || 'Beginner',
+          color: courseData.color || '#ffffff',
+          icon: courseData.icon || 'FaBook',
+          promo_video_url: courseData.promo_video_url || courseData.promoVideoUrl || '',
+          format: courseData.format || 'video',
+          courseType: courseData.courseType || 'recorded',
+          category: courseData.category || 'General',
+          language: courseData.language || 'English',
+          rating: courseData.averageRating || 0,
+          enrolled: courseData.enrollmentCount || 0,
+          price: courseData.price || 0,
+          duration: courseData.estimatedDuration || 'Not specified',
+          certificate: courseData.certificate !== undefined ? courseData.certificate : true,
+          createdAt: courseData.createdAt || new Date().toISOString(),
+          updatedAt: courseData.updatedAt || new Date().toISOString(),
+          status: courseData.status || 'published',
+          instructor: courseData.instructor || {
+            id: courseData.instructor_id || '1',
+            fullName: 'Instructor Name',
+            profilePicture: '/assets/images/avatar/01.jpg'
+          }
+        },
         lectures: courseData.lectures || [],
         reviews: courseData.reviews || [],
         tags: courseData.tags || [],
       };
 
-      // If we have lectures but no modules, organize them into modules
-      if (Array.isArray(formattedCourse.lectures) && formattedCourse.lectures.length > 0 && Object.keys(formattedCourse.modules).length === 0) {
-        // Group lectures by module name
-        const moduleGroups = {};
-        formattedCourse.lectures.forEach(lecture => {
-          const moduleName = lecture.moduleName || 'Module 1';
-          if (!moduleGroups[moduleName]) {
-            moduleGroups[moduleName] = [];
+      // Create modules from lectures or use provided modules
+      if (courseData.modules && typeof courseData.modules === 'object' && !Array.isArray(courseData.modules)) {
+        // If modules is already in the correct format, use it directly
+        formattedCourse.modules = courseData.modules;
+        console.log('Using existing modules object:', formattedCourse.modules);
+      } else if (courseData.modulesList && Array.isArray(courseData.modulesList) && courseData.modulesList.length > 0) {
+        // If modulesList is available (new format), use it to create the modules map
+        console.log('Using modulesList to create modules:', courseData.modulesList);
+        const moduleMap = {};
+
+        courseData.modulesList.forEach(module => {
+          const moduleName = module.title || `Module ${module.moduleNumber || 1}`;
+          moduleMap[moduleName] = [];
+
+          // Find lectures for this module
+          if (Array.isArray(courseData.lectures)) {
+            const moduleLectures = courseData.lectures.filter(lecture =>
+              lecture.moduleId === module.id || lecture.moduleName === moduleName
+            );
+
+            moduleLectures.forEach(lecture => {
+              moduleMap[moduleName].push({
+                id: lecture.id,
+                title: lecture.title || lecture.topicName || 'Untitled Lecture',
+                description: lecture.description || '',
+                duration: lecture.durationMinutes ? `${lecture.durationMinutes}:00` : '45:00',
+                videoUrl: lecture.videoUrl || lecture.videoFile || lecture.video_url || 'https://www.youtube.com/embed/tXHviS-4ygo',
+                watched: false,
+                isDemoLecture: lecture.isDemoLecture || false,
+                isAccessible: lecture.isAccessible || false
+              });
+            });
           }
-          moduleGroups[moduleName].push(lecture);
         });
 
-        formattedCourse.modules = moduleGroups;
+        formattedCourse.modules = moduleMap;
+      } else if (Array.isArray(courseData.modules) && courseData.modules.length > 0) {
+        // If modules is an array, convert it to the expected format
+        console.log('Converting modules array to map:', courseData.modules);
+        const moduleMap = {};
+        courseData.modules.forEach((module, index) => {
+          const moduleName = module.title || `Module ${index + 1}`;
+          moduleMap[moduleName] = [];
+
+          // Add lectures from this module if they exist
+          if (Array.isArray(module.lectures)) {
+            module.lectures.forEach(lecture => {
+              moduleMap[moduleName].push({
+                id: lecture.id,
+                title: lecture.title || 'Untitled Lecture',
+                description: lecture.description || '',
+                duration: lecture.durationMinutes ? `${lecture.durationMinutes}:00` : '45:00',
+                videoUrl: lecture.videoUrl || lecture.videoFile || lecture.video_url || 'https://www.youtube.com/embed/tXHviS-4ygo',
+                watched: false,
+                isDemoLecture: lecture.isDemoLecture || false,
+                isAccessible: lecture.isAccessible || false
+              });
+            });
+          }
+        });
+
+        formattedCourse.modules = moduleMap;
+      } else if (Array.isArray(courseData.lectures) && courseData.lectures.length > 0) {
+        // Group lectures by module if no modules are provided
+        console.log('Grouping lectures by moduleName:', courseData.lectures);
+        const moduleMap = {};
+        courseData.lectures.forEach(lecture => {
+          const moduleName = lecture.moduleName || 'Module 1';
+          if (!moduleMap[moduleName]) {
+            moduleMap[moduleName] = [];
+          }
+          moduleMap[moduleName].push({
+            id: lecture.id,
+            title: lecture.topicName || lecture.title || 'Untitled Lecture',
+            description: lecture.description || '',
+            duration: lecture.durationMinutes ? `${lecture.durationMinutes}:00` : '45:00',
+            videoUrl: lecture.videoUrl || lecture.videoFile || lecture.video_url || 'https://www.youtube.com/embed/tXHviS-4ygo',
+            watched: false,
+            isDemoLecture: lecture.isDemoLecture || false,
+            isAccessible: lecture.isAccessible || false
+          });
+        });
+
+        formattedCourse.modules = moduleMap;
+      } else {
+        // If no modules or lectures exist, create a single empty module
+        console.log('No modules or lectures found, creating empty module structure');
+        formattedCourse.modules = {
+          'Module 1': []
+        };
+
+        // Create some dummy lectures for testing
+        formattedCourse.modules['Module 1'] = [
+          {
+            id: 'dummy-1',
+            title: 'Introduction to the Course',
+            description: 'An overview of what you will learn in this course.',
+            duration: '10:00',
+            videoUrl: 'https://www.youtube.com/embed/tXHviS-4ygo',
+            watched: false,
+            isDemoLecture: true,
+            isAccessible: true
+          },
+          {
+            id: 'dummy-2',
+            title: 'Getting Started',
+            description: 'How to get started with the course materials.',
+            duration: '15:00',
+            videoUrl: 'https://www.youtube.com/embed/tXHviS-4ygo',
+            watched: false,
+            isDemoLecture: false,
+            isAccessible: false
+          }
+        ];
+
+        // Add a second module with some lectures
+        formattedCourse.modules['Module 2'] = [
+          {
+            id: 'dummy-3',
+            title: 'Core Concepts',
+            description: 'Understanding the core concepts.',
+            duration: '20:00',
+            videoUrl: 'https://www.youtube.com/embed/tXHviS-4ygo',
+            watched: false,
+            isDemoLecture: false,
+            isAccessible: false
+          },
+          {
+            id: 'dummy-4',
+            title: 'Advanced Techniques',
+            description: 'Learning advanced techniques.',
+            duration: '25:00',
+            videoUrl: 'https://www.youtube.com/embed/tXHviS-4ygo',
+            watched: false,
+            isDemoLecture: false,
+            isAccessible: false
+          }
+        ];
       }
 
       console.log('Formatted course data:', formattedCourse);
       setCourse(formattedCourse);
 
       // Set the first video as current if available
-      if (Array.isArray(formattedCourse.lectures) && formattedCourse.lectures.length > 0) {
-        const firstVideo = formattedCourse.lectures.find(lecture => lecture.videoUrl);
-        if (firstVideo) {
-          console.log('Setting first video:', firstVideo);
-          setCurrentVideo(firstVideo);
+      // First try to find a demo lecture
+      let firstVideo = null;
+
+      // Look through all modules for a demo lecture
+      for (const moduleName in formattedCourse.modules) {
+        const lectures = formattedCourse.modules[moduleName];
+        if (Array.isArray(lectures) && lectures.length > 0) {
+          // First look for a demo lecture
+          const demoLecture = lectures.find(lecture => lecture.isDemoLecture && lecture.videoUrl);
+          if (demoLecture) {
+            firstVideo = demoLecture;
+            break;
+          }
+          // If no demo lecture, use the first lecture with a videoUrl
+          if (!firstVideo) {
+            const firstLectureWithVideo = lectures.find(lecture => lecture.videoUrl);
+            if (firstLectureWithVideo) {
+              firstVideo = firstLectureWithVideo;
+              // Don't break here, continue looking for demo lectures in other modules
+            }
+          }
         }
+      }
+
+      // If no video found in modules, try the lectures array
+      if (!firstVideo && Array.isArray(formattedCourse.lectures) && formattedCourse.lectures.length > 0) {
+        firstVideo = formattedCourse.lectures.find(lecture => lecture.videoUrl);
+      }
+
+      if (firstVideo) {
+        console.log('Setting first video:', firstVideo);
+        setCurrentVideo(firstVideo);
       }
     } catch (error) {
       console.error('Error formatting course data:', error);
@@ -139,11 +316,16 @@ const CourseDetailPage = () => {
         if (!course) {
           try {
             console.log('Fetching course from file-based API:', courseId);
-            const fileCourse = await axiosInstance.get(`/api/file-course/${courseId}`);
+            const fileCourse = await axiosInstance.get(`/api/file-courses/${courseId}`);
 
             if (fileCourse.data && fileCourse.data.success && fileCourse.data.course) {
               console.log('Successfully fetched course from file-based API:', fileCourse.data.course);
               course = fileCourse.data.course;
+
+              // If we have modules in the response, add them to the course
+              if (fileCourse.data.modules) {
+                course.modules = fileCourse.data.modules;
+              }
             }
           } catch (fileApiError) {
             console.warn('Error fetching from file-based API:', fileApiError);
@@ -223,9 +405,34 @@ const CourseDetailPage = () => {
     console.log('Video selected in page:', video);
     if (video && video.videoUrl) {
       setCurrentVideo(video);
+      // Store the selected video in localStorage for persistence
+      try {
+        localStorage.setItem('lastSelectedVideo_' + courseId, JSON.stringify(video));
+      } catch (error) {
+        console.warn('Failed to store selected video in localStorage:', error);
+      }
+    } else {
+      console.warn('Attempted to select a video without a videoUrl:', video);
     }
   };
-  console.log(currentVideo, "in the course detail page");
+
+  // Load the last selected video from localStorage on initial load
+  useEffect(() => {
+    if (courseId) {
+      try {
+        const savedVideo = localStorage.getItem('lastSelectedVideo_' + courseId);
+        if (savedVideo) {
+          const parsedVideo = JSON.parse(savedVideo);
+          if (parsedVideo && parsedVideo.videoUrl) {
+            console.log('Loaded last selected video from localStorage:', parsedVideo);
+            setCurrentVideo(parsedVideo);
+          }
+        }
+      } catch (error) {
+        console.warn('Failed to load selected video from localStorage:', error);
+      }
+    }
+  }, [courseId]);
 
   // Show loading state while fetching course data
   if (isLoading) {
@@ -240,7 +447,7 @@ const CourseDetailPage = () => {
   if (!course) {
     return (
       <>
-    
+
         <div className="container my-5 py-5 text-center">
           <h2>Course Not Found</h2>
           <p>{error || 'The course you are looking for could not be found. Please try again later or check the URL.'}</p>
@@ -254,20 +461,20 @@ const CourseDetailPage = () => {
             Browse Courses
           </button>
         </div>
-      
+
       </>
     );
   }
 
   return (
     <>
-    
+
       <main>
         <CourseBanner course={course} />
         <BannerVideo course={course} selectedVideo={currentVideo} onVideoSelect={handleVideoSelect} />
-        <CourseDetails course={course} onVideoSelect={handleVideoSelect} />
+        <CourseDetails course={course} onVideoSelect={handleVideoSelect} selectedVideo={currentVideo} />
       </main>
-    
+
     </>
   );
 };

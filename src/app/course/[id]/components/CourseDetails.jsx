@@ -9,12 +9,14 @@ import { currency } from "@/context/constants";
 import CourseTab from "./CourseTab";
 import AllPlayList from "./AllPlayList";
 
-const CourseDetails = ({ course, onVideoSelect }) => {
+const CourseDetails = ({ course, onVideoSelect, selectedVideo }) => {
+  console.log('Course data in CourseDetails:', course);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const toggleDropdown = () => setIsDropdownOpen(!isDropdownOpen);
 
   const handleVideoSelect = (video) => {
-    if (onVideoSelect) {
+    console.log('Video selected in CourseDetails:', video);
+    if (onVideoSelect && video && video.videoUrl) {
       onVideoSelect(video);
     }
   };
@@ -151,7 +153,7 @@ const CourseDetails = ({ course, onVideoSelect }) => {
                   </Card>
                 </Col>
                 <Col xs={12}>
-                  <AllPlayList course={course} onVideoSelect={handleVideoSelect} />
+                  <AllPlayList course={course} onVideoSelect={handleVideoSelect} selectedVideo={selectedVideo} />
                 </Col>
               </Row>
             </div>

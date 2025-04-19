@@ -5,9 +5,9 @@ const layout = ({
   children
 }) => {
   return <>
-      <TopNavigationBar />
+      
       {children}
-      <Footer className='pt-5 bg-light' />
+      
     </>;
 };
 export default layout;
