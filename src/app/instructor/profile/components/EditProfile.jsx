@@ -1,6 +1,6 @@
 // src/app/components/EditProfile.jsx
 'use client';
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form'; // Import useFieldArray
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
@@ -12,10 +12,11 @@ import { toast } from 'react-hot-toast'; // Import toast
 import { useAuth } from "@/context/AuthContext"; // Import auth context
 import authService from "@/services/authService"; // Import auth service
 import IconTextFormInput from '@/components/form/IconTextFormInput'; // Import
-import { FaUser } from 'react-icons/fa'; // Import icons
+import { FaUser, FaPhone } from 'react-icons/fa'; // Import icons
 import defaultImage from '../../../../assets/images/avatar/11.jpg';
 import axiosInstance from '@/utils/axiosInstance';
 import { useRouter } from 'next/navigation';
+import ProfileSkeleton from '@/components/skeletons/ProfileSkeleton';
 
 // --- Validation Schema ---
 const profileSchema = yup.object({
@@ -57,6 +58,21 @@ const EditProfile = () => {
           return;
         }
 
+        // Try to get the latest user data from the server
+        try {
+          const response = await axios.get('/api/user/profile');
+          if (response.data && response.data.success && response.data.user) {
+            // Update local user data with server data
+            const serverUserData = response.data.user;
+            authService.setUser(serverUserData);
+            await refreshUser();
+            console.log('Updated user data from server:', serverUserData);
+          }
+        } catch (serverError) {
+          console.warn('Could not fetch latest user data from server:', serverError);
+          // Continue with local data
+        }
+
         // Initialize form with user data
         reset({
           fullName: user.fullName || user.name,
@@ -87,7 +103,7 @@ const EditProfile = () => {
       setError('Not authenticated');
       setLoading(false);
     }
-  }, [user, authLoading, reset]);
+  }, [user, authLoading, reset, refreshUser]);
 
 
   const onSubmit = async (data) => {
@@ -184,11 +200,26 @@ const EditProfile = () => {
   };
 
   if (loading) {
-    return <div>Loading...</div>;
+    return <ProfileSkeleton />;
   }
 
   if (error) {
-    return <div>Error: {error}</div>;
+    return (
+      <Card className="bg-transparent border rounded-3">
+        <CardBody>
+          <div className="text-center py-5">
+            <h3 className="text-danger">Error</h3>
+            <p>{error}</p>
+            <button
+              className="btn btn-primary mt-3"
+              onClick={() => window.location.reload()}
+            >
+              Try Again
+            </button>
+          </div>
+        </CardBody>
+      </Card>
+    );
   }
 
 
@@ -254,9 +285,14 @@ const EditProfile = () => {
                 />
               </Col>
               <Col md={6}>
-                <label className="form-label">Phone number *</label>
-                <input className="form-control" type="tel" placeholder="Phone Number" {...register("phoneNo")} />
-                {errors.phoneNo && <div className='invalid-feedback d-block'>{errors.phoneNo.message}</div>}
+                <IconTextFormInput
+                  control={control}
+                  icon={FaPhone}
+                  placeholder='Phone Number'
+                  label='Phone number *'
+                  name='phoneNo'
+                  error={errors.phoneNo?.message}
+                />
               </Col>
               <Col xs={12}>
                 <Form.Label className="form-label">About me</Form.Label>

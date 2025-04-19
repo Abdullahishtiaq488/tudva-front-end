@@ -1,12 +1,14 @@
 import Image from "next/image";
-import { Button, Col, Container, Dropdown, DropdownItem, DropdownMenu, DropdownToggle, Row } from "react-bootstrap";
-import { FaCopy, FaFacebookSquare, FaLinkedin, FaSignal, FaStar, FaTwitterSquare, FaUserGraduate } from "react-icons/fa";
+import { Button, Card, CardBody, Col, Container, Dropdown, DropdownItem, DropdownMenu, DropdownToggle, Row } from "react-bootstrap";
+import { FaBookOpen, FaClock, FaCopy, FaFacebookSquare, FaGlobe, FaGraduationCap, FaLinkedin, FaMedal, FaPlay, FaShareAlt, FaSignal, FaStar, FaStopwatch, FaTwitterSquare, FaUserClock, FaUserGraduate } from "react-icons/fa";
 import CourseTab from "./CourseTab";
 import avatar5 from '@/assets/images/avatar/05.jpg';
 import AllPlayList from "./AllPlayList";
 import { useState } from "react";
-import DebugVideoUrl from "./DebugVideoUrl";
+
 import EnrollButton from "@/components/enrollment/EnrollButton";
+import GlightBox from "@/components/GlightBox";
+import { currency } from "@/context/constants";
 
 const CourseDetails = ({ course, onVideoSelect }) => {
   const [selectedVideo, setSelectedVideo] = useState(null);
@@ -28,74 +30,133 @@ const CourseDetails = ({ course, onVideoSelect }) => {
     return <div>Loading course details...</div>;
   }
   // console.log("course in detail",course)
-  return <section className="pt-0">
-    <Container>
-      <Row className="g-lg-5">
-        <Col lg={8}>
-          <Row className="g-4">
-            <Col xs={12}>
-              <h1>{course?.title}</h1>
-              <ul className="list-inline mb-0">
-                <li className="list-inline-item h6 me-3 mb-1 mb-sm-0"><FaStar className="text-warning me-2" />{course?.averageRating?.toFixed(1) || course?.course?.rating || 5.0}/5.0</li>
-                <li className="list-inline-item h6 me-3 mb-1 mb-sm-0"><FaUserGraduate className="text-orange me-2" />{course?.course?.enrolled || 0} Enrolled</li>
-                <li className="list-inline-item h6 me-3 mb-1 mb-sm-0"><FaSignal className="text-success me-2" />{course?.course?.level || "Beginner"}</li>
-              </ul>
-            </Col>
-            <Col xs={12}>
-              <div className="d-sm-flex justify-content-sm-between align-items-center">
-                <div className="d-flex align-items-center">
-                  <div className="avatar avatar-lg">
-                    <img
-                      className="avatar-img rounded-circle"
-                      src={course?.course?.instructor?.profilePicture || '/assets/images/avatar/01.jpg'}
-                      alt="instructor avatar"
-                      width={80}
-                      height={80}
-                    />
-                  </div>
-                  <div className="ms-3">
-                    <h6 className="mb-0"><a href="#">By {course?.course?.instructor?.fullName || 'Instructor Name'}</a></h6>
-                    <p className="mb-0 small">{course?.course?.instructor?.aboutMe || 'Course Instructor'}</p>
-                    <p className="mb-0 small text-muted">{course?.course?.instructor?.email || ''}</p>
-                  </div>
-                </div>
-                <div className="d-flex mt-2 mt-sm-0">
-                  <EnrollButton course={course?.course} variant="primary" size="sm" className="me-2 mb-0" />
-                  <Button variant="danger-soft" size="sm" className="mb-0" href="#">Follow</Button>
-                  <Dropdown className="ms-2">
-                    <DropdownToggle size="sm" className="btn arrow-none border-0 py-2 mb-0 btn-info-soft small" role="button" id="dropdownShare" aria-expanded="false">
-                      share
-                    </DropdownToggle>
-                    <DropdownMenu className="dropdown-w-sm dropdown-menu-end min-w-auto shadow rounded" aria-labelledby="dropdownShare">
-                      <li><DropdownItem href=""><FaTwitterSquare className="me-2" />Twitter</DropdownItem></li>
-                      <li><DropdownItem href=""><FaFacebookSquare className="me-2" />Facebook</DropdownItem></li>
-                      <li><DropdownItem href=""><FaLinkedin className="me-2" />LinkedIn</DropdownItem></li>
-                      <li><DropdownItem href=""><FaCopy className="me-2" />Copy link</DropdownItem></li>
-                    </DropdownMenu>
-                  </Dropdown>
-                </div>
+  // Create a pricing card component
+  const PricingCard = () => {
+    return (
+      <Card className="shadow p-2 mb-4 z-index-9">
+        <div className="overflow-hidden rounded-3">
+          {course?.course?.promo_video_url && (
+            <div className="card-img-overlay d-flex align-items-start flex-column p-3">
+              <div className="m-auto">
+                <GlightBox
+                  href={course?.course?.promo_video_url}
+                  className="btn btn-lg text-danger btn-round btn-white-shadow mb-0"
+                  data-glightbox
+                  data-gallery="course-video"
+                >
+                  <FaPlay />
+                </GlightBox>
               </div>
-            </Col>
-            <Col xs={12}>
-              <CourseTab course={course} />
+            </div>
+          )}
+        </div>
+        <CardBody>
+          <div className="d-flex justify-content-between align-items-center mb-3">
+            <div>
+              <h3 className="fw-bold mb-0">{currency}{course?.course?.price || 0}</h3>
+            </div>
+          </div>
+          <ul className="list-group list-group-borderless">
+            <li className="list-group-item d-flex justify-content-between align-items-center">
+              <span className="h6 fw-light mb-0"><FaUserClock className="text-primary me-2" />Duration</span>
+              <span>{course?.course?.estimatedDuration || '10 hours'}</span>
+            </li>
+            <li className="list-group-item d-flex justify-content-between align-items-center">
+              <span className="h6 fw-light mb-0"><FaBookOpen className="text-primary me-2" />Lectures</span>
+              <span>{course?.lectures?.length || 0} lectures</span>
+            </li>
+            <li className="list-group-item d-flex justify-content-between align-items-center">
+              <span className="h6 fw-light mb-0"><FaSignal className="text-primary me-2" />Level</span>
+              <span>{course?.course?.level || 'Beginner'}</span>
+            </li>
+            <li className="list-group-item d-flex justify-content-between align-items-center">
+              <span className="h6 fw-light mb-0"><FaGlobe className="text-primary me-2" />Language</span>
+              <span>{course?.course?.language || 'English'}</span>
+            </li>
+            <li className="list-group-item d-flex justify-content-between align-items-center">
+              <span className="h6 fw-light mb-0"><FaStopwatch className="text-primary me-2" />Deadline</span>
+              <span>No limit</span>
+            </li>
+            <li className="list-group-item d-flex justify-content-between align-items-center">
+              <span className="h6 fw-light mb-0"><FaMedal className="text-primary me-2" />Certificate</span>
+              <span>{course?.course?.certificate ? 'Yes' : 'No'}</span>
+            </li>
+          </ul>
+        </CardBody>
+        <CardBody className="pt-0">
+          <div className="d-grid gap-2">
+            <Button
+              variant="primary"
+              size="lg"
+              className="mb-0"
+              onClick={() => {
+                // Check if user is logged in
+                const isLoggedIn = localStorage.getItem('token');
+                if (!isLoggedIn) {
+                  // Redirect to login page
+                  window.location.href = '/auth/sign-in';
+                  return;
+                }
+
+                // Show enrollment confirmation
+                if (window.confirm('Are you sure you want to enroll in this course?')) {
+                  // Call enrollment API
+                  fetch('/api/file-booking', {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                      course_id: course?.course?.id,
+                    }),
+                  })
+                    .then(response => response.json())
+                    .then(data => {
+                      if (data.success) {
+                        alert('You have successfully enrolled in this course!');
+                      } else {
+                        alert(data.error || 'Failed to enroll in course. Please try again.');
+                      }
+                    })
+                    .catch(error => {
+                      console.error('Error enrolling in course:', error);
+                      alert('Failed to enroll in course. Please try again.');
+                    });
+                }
+              }}
+            >
+              <FaGraduationCap className="me-2" />
+              Enroll Now
+            </Button>
+          </div>
+        </CardBody>
+      </Card>
+    );
+  };
+
+  return <section className="pb-0 py-lg-5">
+    <Container>
+      <Row>
+        <Col lg={8}>
+          <CourseTab course={course} />
+        </Col>
+        <Col lg={4} className="pt-5 pt-lg-0">
+          <Row className="mb-5 mb-lg-0">
+            <Col md={6} lg={12}>
+              <PricingCard />
+              <Card className="card-body shadow p-4 mb-4">
+                <h4 className="mb-3">Tags</h4>
+                <ul className="list-inline mb-0">
+                  {course?.tags?.map((tag, id) => (
+                    <li className="list-inline-item" key={id}>
+                      <Button variant="outline-light" size="sm">{tag.tag_name}</Button>
+                    </li>
+                  ))}
+                </ul>
+              </Card>
+              <AllPlayList course={course} onVideoSelect={handleVideoSelect} />
             </Col>
           </Row>
-        </Col>
-        <Col lg={4}>
-          <AllPlayList course={course} onVideoSelect={handleVideoSelect} />
-          <div className="mt-4">
-            <h4 className="mb-3">Tags</h4>
-            <ul className="list-inline mb-0">
-              {course?.tags?.map((tag, id) => (
-                <li className="list-inline-item" key={id}>
-                  <Button variant="outline-light" size="sm">{tag.tag_name}</Button>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Debug component to fix video URLs */}
-          <DebugVideoUrl courseId={course?.course?.id} />
         </Col>
       </Row>
     </Container>

@@ -6,11 +6,12 @@ import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import { toast } from 'react-hot-toast';
 import { checkIsLoggedInUser } from '@/helpers/checkLoggedInUser';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 // import { getCookie } from 'cookies-next'; // Import getCookie
 
 const Step1 = ({ goToNextStep }) => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { register, formState: { errors }, control, setValue, trigger, getValues } = useFormContext();
   const searchParams = useSearchParams();
 
@@ -76,7 +77,7 @@ const Step1 = ({ goToNextStep }) => {
 
           // Set form values from draft
           setValue('title', courseData.title || '');
-          setValue('shortDesription', courseData.shortDesription || courseData.shortDescription || '');
+          setValue('short_description', courseData.short_description || courseData.shortDesription || courseData.shortDescription || '');
           setValue('description', courseData.description || '');
           setValue('category', courseData.category || '');
           setValue('level', courseData.level || '');
@@ -119,6 +120,7 @@ const Step1 = ({ goToNextStep }) => {
   const handleNext = async () => {
     // Save draft before validation
     saveDraft();
+    setIsSubmitting(true);
 
     // 1. Validate Step 1 fields (promoVideoUrl is optional):
     const isValid = await trigger(["title", "short_description", "description", "category", "level", "language", "modulesCount"]);
@@ -219,12 +221,17 @@ const Step1 = ({ goToNextStep }) => {
           toast.success("Step 1 completed successfully!");
         }
 
-        // Go to the next step
-        goToNextStep();
+        // Go to the next step with completion flag
+        goToNextStep(true);
       } catch (error) {
         toast.error("An unexpected error occurred: " + error.message);
         console.error("Error handling course:", error);
+      } finally {
+        setIsSubmitting(false);
       }
+    } else {
+      setIsSubmitting(false);
+      toast.error("Please fill in all required fields");
     }
   };
 
@@ -401,8 +408,14 @@ const Step1 = ({ goToNextStep }) => {
 
         {/* Next Button */}
         <div className="d-flex justify-content-end mt-5">
-          <Button type="button" variant="primary" className="mb-0" onClick={handleNext}>
-            {getValues('courseId') ? 'Update & Next' : 'Create Course & Next'}
+          <Button
+            type="button"
+            variant="primary"
+            className="mb-0"
+            onClick={handleNext}
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? 'Processing...' : (getValues('courseId') ? 'Update & Next' : 'Create Course & Next')}
           </Button>
         </div>
       </Row>

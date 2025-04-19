@@ -27,13 +27,13 @@ export default function ProtectedRoute({
     }
 
     // If authenticated but role check fails, redirect
-    if (allowedRoles.length > 0 && !allowedRoles.includes(user?.role)) {
-      console.log(`User role ${user?.role} not allowed, redirecting`);
+    if (allowedRoles.length > 0 && !allowedRoles.includes(user?.role?.toLowerCase())) {
+      console.log(`User role ${user?.role} not allowed for ${allowedRoles.join(', ')}, redirecting`);
       toast.error(`You don't have permission to access this page`);
       // Redirect based on role
-      if (user?.role === 'instructor') {
+      if (user?.role?.toLowerCase() === 'instructor') {
         router.push('/instructor/view-profile');
-      } else if (user?.role === 'learner') {
+      } else if (user?.role?.toLowerCase() === 'learner') {
         router.push('/student/view-profile');
       } else {
         router.push('/');
@@ -52,7 +52,7 @@ export default function ProtectedRoute({
   }
 
   // If role check fails, show loading spinner while redirect happens
-  if (allowedRoles.length > 0 && !allowedRoles.includes(user?.role)) {
+  if (allowedRoles.length > 0 && !allowedRoles.includes(user?.role?.toLowerCase())) {
     return <LoadingSpinner />;
   }
 

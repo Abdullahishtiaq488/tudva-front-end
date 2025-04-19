@@ -26,7 +26,7 @@ export async function POST(request) {
       return NextResponse.json(response.data);
     } catch (backendError) {
       console.error('Backend API error:', backendError);
-      
+
       // If the backend API fails, update the profile locally
       // This is a fallback mechanism to ensure the app keeps working
       return NextResponse.json({

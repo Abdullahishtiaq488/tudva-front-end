@@ -52,9 +52,12 @@ const EnhancedPlaylist = ({ course, onVideoSelect }) => {
 
     // Extract all lectures from modules
     Object.entries(course.modules).forEach(([moduleName, videos]) => {
-      videos.forEach(video => {
-        lectures.push(video);
-      });
+      // Check if videos is an array
+      if (Array.isArray(videos)) {
+        videos.forEach(video => {
+          lectures.push(video);
+        });
+      }
     });
 
     // Fetch access status for each lecture
@@ -128,12 +131,21 @@ const EnhancedPlaylist = ({ course, onVideoSelect }) => {
     return <div>Loading course content...</div>;
   }
 
+  // Ensure all modules have valid video arrays
+  const validModules = {};
+  Object.entries(course.modules).forEach(([moduleName, videos]) => {
+    // Check if videos is an array
+    if (Array.isArray(videos) && videos.length > 0) {
+      validModules[moduleName] = videos;
+    }
+  });
+
   return (
     <Accordion defaultActiveKey='0' className="accordion-icon accordion-bg-light" id="accordionExample2">
-      {Object.entries(course.modules).map(([moduleName, videos], moduleIdx) => (
+      {Object.entries(validModules).map(([moduleName, videos], moduleIdx) => (
         <AccordionItem
           eventKey={`${moduleIdx}`}
-          className={clsx(Object.keys(course.modules).length - 1 !== moduleIdx ? "mb-3" : "mb-0")}
+          className={clsx(Object.keys(validModules).length - 1 !== moduleIdx ? "mb-3" : "mb-0")}
           key={moduleIdx}
         >
           <AccordionHeader as='h6' className="font-base" id={`heading-${moduleIdx}`}>
@@ -147,18 +159,18 @@ const EnhancedPlaylist = ({ course, onVideoSelect }) => {
               <div className="overflow-hidden">
                 <div className="d-flex justify-content-between">
                   <p className="mb-1 h6">
-                    {videos.filter(video => video.watched).length}/{videos.length} Completed
+                    {Array.isArray(videos) ? videos.filter(video => video.watched).length : 0}/{videos.length} Completed
                   </p>
                   <h6 className="mb-1 text-end">
                     {videos.length > 0
-                      ? Math.round((videos.filter(video => video.watched).length / videos.length) * 100)
+                      ? Math.round(((Array.isArray(videos) ? videos.filter(video => video.watched).length : 0) / videos.length) * 100)
                       : 0}%
                   </h6>
                 </div>
                 <ProgressBar
                   variant="primary"
                   now={videos.length > 0
-                    ? Math.round((videos.filter(video => video.watched).length / videos.length) * 100)
+                    ? Math.round(((Array.isArray(videos) ? videos.filter(video => video.watched).length : 0) / videos.length) * 100)
                     : 0}
                   className="progress-sm bg-opacity-10"
                 />

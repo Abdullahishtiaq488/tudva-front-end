@@ -158,9 +158,9 @@ const CourseCard = ({
       console.error('Error storing course in localStorage:', error);
     }
 
-    // Use the correct path format with leading slash
+    // Use the new simplified path format
     console.log('Navigating to course detail page with ID:', id);
-    router.push(`/pages/course/detail-min/${id}`);
+    router.push(`/course/${id}`);
   };
 
   return <Card

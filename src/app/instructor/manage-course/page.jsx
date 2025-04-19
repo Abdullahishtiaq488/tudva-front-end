@@ -11,6 +11,7 @@ import { syncCourses } from '@/utils/courseSync';
 import { getAllSimpleCourses } from '@/utils/simpleCourseApi';
 import { getAllDirectCourses } from '@/utils/directCourseApi';
 import { getAllFileCourses } from '@/utils/fileCourseApi';
+import { useAuth } from '@/context/AuthContext';
 const ManageCoursePage = () => {
   const [courses, setCourses] = useState([]);
   const [filteredCourses, setFilteredCourses] = useState([]);
@@ -19,6 +20,7 @@ const ManageCoursePage = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(5);
   const [isLoading, setIsLoading] = useState(true);
+  const { user } = useAuth(); // Get the current user from auth context
 
   // Load courses from backend and localStorage
   useEffect(() => {
@@ -26,14 +28,30 @@ const ManageCoursePage = () => {
       try {
         setIsLoading(true);
 
+        // Get the current user ID
+        const currentUserId = user?.id;
+        console.log('Current user ID:', currentUserId);
+
         // First try to get courses from the file-based API
         try {
           const fileCourses = await getAllFileCourses();
           console.log('Courses from file-based API:', fileCourses);
 
           if (fileCourses && fileCourses.length > 0) {
+            // Filter courses by instructor ID if user is available
+            const instructorCourses = currentUserId
+              ? fileCourses.filter(course => {
+                // Check different possible instructor ID fields
+                return course.instructor_id === currentUserId ||
+                  course.instructorId === currentUserId ||
+                  (course.instructor && course.instructor.id === currentUserId);
+              })
+              : fileCourses;
+
+            console.log('Filtered instructor courses:', instructorCourses);
+
             // Sort by creation date (newest first)
-            const sortedCourses = fileCourses.sort((a, b) => {
+            const sortedCourses = instructorCourses.sort((a, b) => {
               return new Date(b.createdAt || b.updatedAt || 0) - new Date(a.createdAt || a.updatedAt || 0);
             });
 
@@ -58,8 +76,20 @@ const ManageCoursePage = () => {
           console.log('Courses from direct API:', directCourses);
 
           if (directCourses && directCourses.length > 0) {
+            // Filter courses by instructor ID if user is available
+            const instructorCourses = currentUserId
+              ? directCourses.filter(course => {
+                // Check different possible instructor ID fields
+                return course.instructor_id === currentUserId ||
+                  course.instructorId === currentUserId ||
+                  (course.instructor && course.instructor.id === currentUserId);
+              })
+              : directCourses;
+
+            console.log('Filtered instructor courses from direct API:', instructorCourses);
+
             // Sort by creation date (newest first)
-            const sortedCourses = directCourses.sort((a, b) => {
+            const sortedCourses = instructorCourses.sort((a, b) => {
               return new Date(b.createdAt || b.updatedAt || 0) - new Date(a.createdAt || a.updatedAt || 0);
             });
 
@@ -84,8 +114,20 @@ const ManageCoursePage = () => {
           console.log('Courses from simplified API:', simplifiedCourses);
 
           if (simplifiedCourses && simplifiedCourses.length > 0) {
+            // Filter courses by instructor ID if user is available
+            const instructorCourses = currentUserId
+              ? simplifiedCourses.filter(course => {
+                // Check different possible instructor ID fields
+                return course.instructor_id === currentUserId ||
+                  course.instructorId === currentUserId ||
+                  (course.instructor && course.instructor.id === currentUserId);
+              })
+              : simplifiedCourses;
+
+            console.log('Filtered instructor courses from simplified API:', instructorCourses);
+
             // Sort by creation date (newest first)
-            const sortedCourses = simplifiedCourses.sort((a, b) => {
+            const sortedCourses = instructorCourses.sort((a, b) => {
               return new Date(b.createdAt || b.updatedAt || 0) - new Date(a.createdAt || a.updatedAt || 0);
             });
 
@@ -105,8 +147,20 @@ const ManageCoursePage = () => {
         // Fallback to localStorage via sync function
         const allCourses = await syncCourses();
 
+        // Filter courses by instructor ID if user is available
+        const instructorCourses = currentUserId
+          ? allCourses.filter(course => {
+            // Check different possible instructor ID fields
+            return course.instructor_id === currentUserId ||
+              course.instructorId === currentUserId ||
+              (course.instructor && course.instructor.id === currentUserId);
+          })
+          : allCourses;
+
+        console.log('Filtered instructor courses from localStorage:', instructorCourses);
+
         // Sort by creation date (newest first)
-        const sortedCourses = allCourses.sort((a, b) => {
+        const sortedCourses = instructorCourses.sort((a, b) => {
           return new Date(b.createdAt || b.updatedAt || 0) - new Date(a.createdAt || a.updatedAt || 0);
         });
 
@@ -120,8 +174,21 @@ const ManageCoursePage = () => {
           const coursesStr = localStorage.getItem('courses');
           if (coursesStr) {
             const localCourses = JSON.parse(coursesStr);
-            setCourses(localCourses);
-            setFilteredCourses(localCourses);
+
+            // Filter courses by instructor ID if user is available
+            const instructorCourses = currentUserId
+              ? localCourses.filter(course => {
+                // Check different possible instructor ID fields
+                return course.instructor_id === currentUserId ||
+                  course.instructorId === currentUserId ||
+                  (course.instructor && course.instructor.id === currentUserId);
+              })
+              : localCourses;
+
+            console.log('Filtered instructor courses from localStorage fallback:', instructorCourses);
+
+            setCourses(instructorCourses);
+            setFilteredCourses(instructorCourses);
           }
         } catch (localError) {
           console.error('Error loading from localStorage:', localError);
@@ -133,7 +200,7 @@ const ManageCoursePage = () => {
     };
 
     loadCourses();
-  }, []);
+  }, [user]);
 
   // Handle search
   useEffect(() => {
@@ -255,7 +322,6 @@ const ManageCoursePage = () => {
           <thead>
             <tr>
               <th scope="col" className="border-0 rounded-start">Course Title</th>
-              <th scope="col" className="border-0">Enrolled</th>
               <th scope="col" className="border-0">Status</th>
               <th scope="col" className="border-0 rounded-end">Action</th>
             </tr>
@@ -315,7 +381,7 @@ const ManageCoursePage = () => {
                       </div>
                       <div className="mb-0 ms-2">
                         <h6>
-                          <Link href={`/pages/course/detail-min/${course.id}`}>
+                          <Link href={`/course/${course.id}`}>
                             {course.title || 'Untitled Course'}
                           </Link>
                         </h6>
@@ -324,15 +390,11 @@ const ManageCoursePage = () => {
                             <FaTable className="text-orange me-2" />
                             {Array.isArray(course.lectures) ? course.lectures.length : 0} lectures
                           </p>
-                          <p className="h6 fw-light mb-0 small">
-                            <FaCheckCircle className="text-success me-2" />
-                            0 Completed
-                          </p>
                         </div>
                       </div>
                     </div>
                   </td>
-                  <td className="text-center text-sm-start">0</td>
+
                   <td>
                     <div className={`badge ${course.status === 'published' ? 'bg-success' : 'bg-warning'} bg-opacity-10 ${course.status === 'published' ? 'text-success' : 'text-warning'}`}>
                       {course.status === 'published' ? 'Published' : 'Draft'}

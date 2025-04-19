@@ -1,6 +1,6 @@
 // src/app/courses/create/page.jsx (Corrected Hydration)
 'use client'
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { Card, CardBody, CardHeader, Col, Container, Row } from 'react-bootstrap'
 import 'bs-stepper/dist/css/bs-stepper.min.css'
 import Step1 from './Step1'
@@ -61,12 +61,18 @@ const courseSchema = yup.object({
 
 const stepperOptions = {
   // Define options OUTSIDE the component
-  linear: false,
+  linear: true, // Set to true to enforce step order
   animation: true,
 }
 
 const CreateCourseForm = () => {
   const { stepper, stepperRef } = useBSStepper(stepperOptions)
+  const [currentStep, setCurrentStep] = useState(1)
+  const [stepsCompleted, setStepsCompleted] = useState({
+    step1: false,
+    step2: false,
+    step3: false
+  })
 
   const methods = useForm({
     resolver: yupResolver(courseSchema),
@@ -92,15 +98,52 @@ const CreateCourseForm = () => {
   })
   const router = useRouter()
 
-  const goToNextStep = async () => {
+  // Effect to handle stepper navigation
+  useEffect(() => {
+    if (!stepper) return;
+
+    // Add event listener for step change
+    const stepChangeHandler = (event) => {
+      const newStep = parseInt(event.detail.indexStep) + 1;
+      setCurrentStep(newStep);
+
+      // Prevent navigation to steps that haven't been unlocked
+      if (newStep > 1) {
+        const prevStepKey = `step${newStep - 1}`;
+        if (!stepsCompleted[prevStepKey]) {
+          event.preventDefault();
+          toast.error(`Please complete Step ${newStep - 1} before proceeding.`);
+          return false;
+        }
+      }
+    };
+
+    // Add event listener to stepper element
+    const stepperElement = stepper._element;
+    stepperElement.addEventListener('show.bs-stepper', stepChangeHandler);
+
+    return () => {
+      // Clean up event listener
+      stepperElement.removeEventListener('show.bs-stepper', stepChangeHandler);
+    };
+  }, [stepper, stepsCompleted]);
+
+  const goToNextStep = async (stepCompleted) => {
     if (stepper) {
-      stepper.next()
+      // Mark the current step as completed
+      if (stepCompleted) {
+        setStepsCompleted(prev => ({
+          ...prev,
+          [`step${currentStep}`]: true
+        }));
+      }
+      stepper.next();
     }
   }
 
   const goBackToPreviousStep = () => {
     if (stepper) {
-      stepper.previous()
+      stepper.previous();
     }
   }
 
@@ -137,38 +180,67 @@ const CreateCourseForm = () => {
                 {/* Step 1 */}
                 <div className="step" data-target="#step-1">
                   <div className="d-grid text-center align-items-center">
-                    <button type="button" className="btn btn-link step-trigger mb-0" role="tab" id="steppertrigger1" aria-controls="step-1">
-                      <span className="bs-stepper-circle">1</span>
+                    <button
+                      type="button"
+                      className="btn btn-link step-trigger mb-0"
+                      role="tab"
+                      id="steppertrigger1"
+                      aria-controls="step-1"
+                    >
+                      <span className={`bs-stepper-circle ${stepsCompleted.step1 ? 'bg-success' : ''}`}>1</span>
                     </button>
                     <h6 className="bs-stepper-label d-none d-md-block">Course details</h6>
                   </div>
                 </div>
                 <div className="line" />
 
-                {/* Step 2 - 4 (Repeat similar structure)*/}
+                {/* Step 2 */}
                 <div className="step" data-target="#step-2">
                   <div className="d-grid text-center align-items-center">
-                    <button type="button" className="btn btn-link step-trigger mb-0" role="tab" id="steppertrigger2" aria-controls="step-2">
-                      <span className="bs-stepper-circle">2</span>
+                    <button
+                      type="button"
+                      className="btn btn-link step-trigger mb-0"
+                      role="tab"
+                      id="steppertrigger2"
+                      aria-controls="step-2"
+                      disabled={!stepsCompleted.step1}
+                    >
+                      <span className={`bs-stepper-circle ${stepsCompleted.step2 ? 'bg-success' : ''}`}>2</span>
                     </button>
                     <h6 className="bs-stepper-label d-none d-md-block">Course media</h6>
                   </div>
                 </div>
                 <div className="line" />
 
+                {/* Step 3 */}
                 <div className="step" data-target="#step-3">
                   <div className="d-grid text-center align-items-center">
-                    <button type="button" className="btn btn-link step-trigger mb-0" role="tab" id="steppertrigger3" aria-controls="step-3">
-                      <span className="bs-stepper-circle">3</span>
+                    <button
+                      type="button"
+                      className="btn btn-link step-trigger mb-0"
+                      role="tab"
+                      id="steppertrigger3"
+                      aria-controls="step-3"
+                      disabled={!stepsCompleted.step2}
+                    >
+                      <span className={`bs-stepper-circle ${stepsCompleted.step3 ? 'bg-success' : ''}`}>3</span>
                     </button>
                     <h6 className="bs-stepper-label d-none d-md-block">Curriculum</h6>
                   </div>
                 </div>
                 <div className="line" />
 
+                {/* Step 4 */}
                 <div className="step" data-target="#step-4">
                   <div className="d-grid text-center align-items-center">
-                    <button type="button" className="btn btn-link step-trigger mb-0" role="tab" id="steppertrigger4" aria-controls="step-4">
+                    <button
+                      type="button"
+                      className="btn btn-link step-trigger mb-0"
+                      role="tab"
+                      id="steppertrigger4"
+                      aria-controls="step-4"
+                      disabled={!stepsCompleted.step3}
+                    >
                       <span className="bs-stepper-circle">4</span>
                     </button>
                     <h6 className="bs-stepper-label d-none d-md-block">Additional information</h6>

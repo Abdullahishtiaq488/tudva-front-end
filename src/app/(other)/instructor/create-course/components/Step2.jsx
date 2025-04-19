@@ -16,6 +16,7 @@ const Step2 = ({ goToNextStep, goBackToPreviousStep }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [availableIcons, setAvailableIcons] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [useCustomIcons, setUseCustomIcons] = useState(true); // Toggle between custom icons and Font Awesome
 
   const { setValue, getValues, formState: { errors }, trigger } = useFormContext(); // Get trigger and getValues
@@ -140,6 +141,7 @@ const Step2 = ({ goToNextStep, goBackToPreviousStep }) => {
   const handleNext = async () => {
     // Save draft before validation
     saveDraft();
+    setIsSubmitting(true);
 
     const isValid = await trigger(['color', 'icon']); // Validate color and icon
     if (isValid) {
@@ -197,11 +199,16 @@ const Step2 = ({ goToNextStep, goBackToPreviousStep }) => {
         }
 
         toast.success('Step 2 data updated successfully!');
-        goToNextStep();
+        goToNextStep(true); // Mark step as completed
       } catch (error) {
         console.error("Error updating Step 2 data:", error);
         toast.error('An unexpected error occurred during Step 2 update.');
+      } finally {
+        setIsSubmitting(false);
       }
+    } else {
+      setIsSubmitting(false);
+      toast.error('Please select both a color and an icon');
     }
   };
 
@@ -339,11 +346,11 @@ const Step2 = ({ goToNextStep, goBackToPreviousStep }) => {
         {/* Navigation Buttons */}
         <Col xs={12}>
           <div className="d-flex justify-content-between mt-3">
-            <Button variant="secondary" onClick={handlePrevious} className="mb-0">
+            <Button variant="secondary" onClick={handlePrevious} className="mb-0" disabled={isSubmitting}>
               Previous
             </Button>
-            <Button variant="primary" onClick={handleNext} className="mb-0">
-              Next
+            <Button variant="primary" onClick={handleNext} className="mb-0" disabled={isSubmitting}>
+              {isSubmitting ? 'Processing...' : 'Next'}
             </Button>
           </div>
         </Col>

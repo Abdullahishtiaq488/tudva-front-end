@@ -77,32 +77,52 @@ const getMockCourses = () => {
 
 const fetchCourses = async (search, category, sortBy, page) => {
   try {
-    // First, try to get courses from the backend using the file-based API
+    // First, try to get courses directly from the database API
     let allCourses = [];
     try {
-      // Try all methods in parallel to speed up loading
-      const [fileCourses, directCourses, simpleCourses, localCourses] = await Promise.allSettled([
-        getAllFileCourses(),
+      // Try to fetch from the database API first
+      try {
+        // Make a direct API call to the backend database endpoint
+        const response = await fetch(`/api/courses?page=${page}&pageSize=10${search ? `&search=${search}` : ''}${category && category !== 'All' ? `&subject=${category}` : ''}`);
+        const data = await response.json();
+
+        if (data.success && data.courses && data.courses.length > 0) {
+          console.log('Successfully fetched courses from database API:', data.courses);
+          allCourses = data.courses;
+          return {
+            courses: allCourses,
+            totalPages: data.totalPages || Math.ceil(allCourses.length / 10) || 1
+          };
+        } else {
+          console.log('No courses found in database API, trying other sources');
+        }
+      } catch (dbError) {
+        console.warn('Error fetching from database API:', dbError);
+      }
+
+      // If database API fails, try other methods in parallel as fallback
+      const [directCourses, simpleCourses, fileCourses, localCourses] = await Promise.allSettled([
         getAllDirectCourses(),
         getAllSimpleCourses(),
+        getAllFileCourses(),
         getAllCourses()
       ]);
 
-      console.log('Courses from file-based API:', fileCourses.status === 'fulfilled' ? fileCourses.value : 'Failed');
       console.log('Courses from direct API:', directCourses.status === 'fulfilled' ? directCourses.value : 'Failed');
       console.log('Courses from simplified API:', simpleCourses.status === 'fulfilled' ? simpleCourses.value : 'Failed');
+      console.log('Courses from file-based API:', fileCourses.status === 'fulfilled' ? fileCourses.value : 'Failed');
       console.log('Courses from localStorage:', localCourses.status === 'fulfilled' ? localCourses.value : 'Failed');
 
       // Use the first successful result that has courses
-      if (fileCourses.status === 'fulfilled' && fileCourses.value && fileCourses.value.length > 0) {
-        allCourses = fileCourses.value;
-        console.log('Using courses from file-based API');
-      } else if (directCourses.status === 'fulfilled' && directCourses.value && directCourses.value.length > 0) {
+      if (directCourses.status === 'fulfilled' && directCourses.value && directCourses.value.length > 0) {
         allCourses = directCourses.value;
         console.log('Using courses from direct API');
       } else if (simpleCourses.status === 'fulfilled' && simpleCourses.value && simpleCourses.value.length > 0) {
         allCourses = simpleCourses.value;
         console.log('Using courses from simplified API');
+      } else if (fileCourses.status === 'fulfilled' && fileCourses.value && fileCourses.value.length > 0) {
+        allCourses = fileCourses.value;
+        console.log('Using courses from file-based API');
       } else if (localCourses.status === 'fulfilled' && localCourses.value && localCourses.value.length > 0) {
         allCourses = localCourses.value;
         console.log('Using courses from localStorage');

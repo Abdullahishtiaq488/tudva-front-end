@@ -20,6 +20,7 @@ const Step3 = ({ goToNextStep, goBackToPreviousStep }) => {
   const [showAddTopicModal, setShowAddTopicModal] = useState(false);
   const [currentGroupIndex, setCurrentGroupIndex] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const componentRef = useRef(null);
   const [isVisible, setIsVisible] = useState(false);
 
@@ -256,6 +257,7 @@ const Step3 = ({ goToNextStep, goBackToPreviousStep }) => {
   const handleNext = async () => {
     // Save draft before validation
     updateCourseInLocalStorage();
+    setIsSubmitting(true);
 
     // Check if we have at least one lecture in each module
     const { lectureGroups } = getValues();
@@ -273,6 +275,7 @@ const Step3 = ({ goToNextStep, goBackToPreviousStep }) => {
       // Show warning but allow to proceed
       const warningMessage = `The following modules have no lectures: ${emptyModules.join(', ')}. Do you want to continue anyway?`;
       if (!confirm(warningMessage)) {
+        setIsSubmitting(false);
         return;
       }
     }
@@ -316,11 +319,16 @@ const Step3 = ({ goToNextStep, goBackToPreviousStep }) => {
         updateCourseInLocalStorage();
 
         toast.success("Step 3 data updated successfully!");
-        goToNextStep();
+        goToNextStep(true); // Mark step as completed
       } catch (error) {
         console.error("Error updating course:", error);
         toast.error("An unexpected error occurred during Step 3 update.");
+      } finally {
+        setIsSubmitting(false);
       }
+    } else {
+      setIsSubmitting(false);
+      toast.error("Please ensure all modules have valid content");
     }
   };
 
@@ -510,13 +518,28 @@ const Step3 = ({ goToNextStep, goBackToPreviousStep }) => {
                 <Accordion.Item key={group.id} eventKey={group.id} className="mb-3">
                   <Accordion.Header as={"h6"} className="font-base">
                     <div
-                      className="fw-bold"
+                      className="fw-bold module-name-editable"
                       contentEditable
                       suppressContentEditableWarning
                       onBlur={(e) => handleUpdateLectureGroupName(groupIndex, e.target.innerText)}
+                      onKeyDown={(e) => {
+                        // Save on Enter key press
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          e.target.blur();
+                          handleUpdateLectureGroupName(groupIndex, e.target.innerText);
+                        }
+                      }}
                     >
                       {group.lectureHeading}
                     </div>
+                    <style jsx>{`
+                      .module-name-editable:focus {
+                        outline: 2px solid #007bff;
+                        padding: 2px 5px;
+                        border-radius: 4px;
+                      }
+                    `}</style>
                   </Accordion.Header>
                   <Accordion.Body className="mt-3">
                     {group.lectures.map((lecture, lectureIndex) => (
@@ -569,7 +592,14 @@ const Step3 = ({ goToNextStep, goBackToPreviousStep }) => {
                               variant="success-soft"
                               size="sm"
                               className="btn-round me-1 mb-1 mb-md-0"
-                              onClick={() => { /* Implement edit */ }}
+                              onClick={() => {
+                                // Set current group index and show modal with pre-filled data
+                                setCurrentGroupIndex(groupIndex);
+                                // Open the modal with the lecture data pre-filled
+                                setShowAddTopicModal(true);
+                                // Pre-fill the form data (this will be handled in the AddTopic component)
+                                // We'll pass the lecture data as a prop to the AddTopic component
+                              }}
                             >
                               <FaEdit />
                             </Button>
@@ -614,11 +644,21 @@ const Step3 = ({ goToNextStep, goBackToPreviousStep }) => {
       />
 
       <div className="d-flex justify-content-between mt-5">
-        <button type="button" className="btn btn-secondary prev-btn mb-0" onClick={goBackToPreviousStep}>
+        <button
+          type="button"
+          className="btn btn-secondary prev-btn mb-0"
+          onClick={goBackToPreviousStep}
+          disabled={isSubmitting}
+        >
           Previous
         </button>
-        <button type="button" className="btn btn-primary next-btn mb-0" onClick={handleNext}>
-          Next
+        <button
+          type="button"
+          className="btn btn-primary next-btn mb-0"
+          onClick={handleNext}
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? 'Processing...' : 'Next'}
         </button>
       </div>
     </div>

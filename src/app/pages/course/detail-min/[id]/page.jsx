@@ -452,9 +452,9 @@ const DetailMinimal = () => {
   if (isLoading) {
     return (
       <>
-        <TopNavigationBar />
+        
         <CourseDetailSkeleton />
-        <Footer className="bg-light" />
+    
       </>
     );
   }

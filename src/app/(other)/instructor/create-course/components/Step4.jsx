@@ -23,8 +23,27 @@ const calculateEstimatedDuration = (lectures) => {
     return 0;
   }
 
-  // Each lecture is 45 minutes by default
-  return lectures.length * 45;
+  // If lectures have duration property, use that
+  const totalMinutes = lectures.reduce((total, lecture) => {
+    // If lecture has a duration property, use it
+    if (lecture.duration) {
+      return total + parseInt(lecture.duration);
+    }
+    // Otherwise use default 45 minutes
+    return total + 45;
+  }, 0);
+
+  // Convert minutes to hours and minutes format
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+
+  if (hours === 0) {
+    return `${minutes} minutes`;
+  } else if (minutes === 0) {
+    return `${hours} hours`;
+  } else {
+    return `${hours} hours ${minutes} minutes`;
+  }
 };
 
 const Step4 = ({ goBackToPreviousStep, onSubmit }) => {
@@ -107,17 +126,41 @@ const Step4 = ({ goBackToPreviousStep, onSubmit }) => {
     // Clone the start date to avoid modifying it
     const endDate = new Date(startDateObj);
 
-    // Add the required number of days, skipping weekends
-    let daysAdded = 0;
-    let totalDaysToAdd = daysNeeded - 1; // -1 because we start counting from the start date
+    // Get the last lecture date from the schedule
+    // If we have a schedule with lectures, use the date of the last lecture
+    if (lectureGroups && lectureGroups.length > 0) {
+      // Flatten all lectures from all groups
+      const allLectures = lectureGroups.reduce((acc, group) => {
+        if (group.lectures && group.lectures.length > 0) {
+          return [...acc, ...group.lectures];
+        }
+        return acc;
+      }, []);
 
-    while (daysAdded < totalDaysToAdd) {
-      endDate.setDate(endDate.getDate() + 1);
-      // Skip weekends (0 = Sunday, 6 = Saturday)
-      const dayOfWeek = endDate.getDay();
-      if (dayOfWeek !== 0 && dayOfWeek !== 6) {
-        daysAdded++;
+      // Sort lectures by their index/order
+      const sortedLectures = [...allLectures].sort((a, b) => {
+        return (a.sortOrder || 0) - (b.sortOrder || 0);
+      });
+
+      // Calculate the end date based on the number of lectures
+      // Each lecture is 45 minutes, and we can have slotsPerDay lectures per day
+      if (sortedLectures.length > 0) {
+        // Add the required number of days, skipping weekends
+        let daysAdded = 0;
+        let totalDaysToAdd = daysNeeded - 1; // -1 because we start counting from the start date
+
+        while (daysAdded < totalDaysToAdd) {
+          endDate.setDate(endDate.getDate() + 1);
+          // Skip weekends (0 = Sunday, 6 = Saturday)
+          const dayOfWeek = endDate.getDay();
+          if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+            daysAdded++;
+          }
+        }
       }
+    } else {
+      // If no lectures, just add the calculated number of days
+      endDate.setDate(startDateObj.getDate() + (weeksNeeded * 7) - 1); // -1 to not count the start date twice
     }
 
     setEstimatedEndDate(endDate.toLocaleDateString('en-US', {

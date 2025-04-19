@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Accordion, AccordionBody, AccordionHeader, AccordionItem, Button, ProgressBar } from "react-bootstrap";
-import { FaPlay } from "react-icons/fa";
+import { Accordion, AccordionBody, AccordionHeader, AccordionItem, Button } from "react-bootstrap";
+import { FaPlay, FaLock, FaCheckCircle } from "react-icons/fa";
 import clsx from "clsx";
 import { Fragment } from "react";
 
@@ -17,9 +17,6 @@ const Playlist = ({ course, onVideoSelect }) => {
     }
   };
 
-
-
-  console.log(course, "in the playlist")
   // Early return if no course data
   if (!course || !course.modules) {
     return <div>Loading course content...</div>;
@@ -35,48 +32,66 @@ const Playlist = ({ course, onVideoSelect }) => {
   });
 
   return (
-    <Accordion defaultActiveKey='0' className="accordion-icon accordion-bg-light" id="accordionExample2">
+    <Accordion defaultActiveKey='0' className="accordion-icon accordion-bg-light border-0" id="accordionExample2">
       {Object.entries(validModules).map(([moduleName, videos], moduleIdx) => (
         <AccordionItem
           eventKey={`${moduleIdx}`}
           className={clsx(Object.keys(validModules).length - 1 !== moduleIdx ? "mb-3" : "mb-0")}
           key={moduleIdx}
         >
-          <AccordionHeader as='h6' className="font-base" id={`heading-${moduleIdx}`}>
-            <div className="fw-bold rounded collapsed d-block">
-              <span className="mb-0">{moduleName}</span>
-              <span className="small d-block mt-1">({videos.length} Lectures)</span>
+          <AccordionHeader as='h6' className="font-base bg-light rounded-3" id={`heading-${moduleIdx}`}>
+            <div className="fw-bold d-flex justify-content-between align-items-center w-100">
+              <div>
+                <span className="mb-0 text-primary">{moduleName}</span>
+                <span className="small d-block mt-1 text-muted">({videos.length} Lectures)</span>
+              </div>
+              <span className="badge bg-primary rounded-pill">{moduleIdx + 1}</span>
             </div>
           </AccordionHeader>
           <AccordionBody className="mt-3">
             <div className="vstack gap-3">
               <div className="overflow-hidden">
-                <div className="d-flex justify-content-between">
-                  <p className="mb-1 h6">
-                    {Array.isArray(videos) ? videos.filter(video => video.watched).length : 0}/{videos.length} Completed
-                  </p>
-                  <h6 className="mb-1 text-end">
+                <div className="d-flex justify-content-between align-items-center mb-2">
+                  <div className="d-flex align-items-center">
+                    <div className="text-primary me-2">
+                      <FaPlay size={12} />
+                    </div>
+                    <p className="mb-0 small">
+                      <span className="fw-bold">{Array.isArray(videos) ? videos.filter(video => video.watched).length : 0}</span> of <span className="fw-bold">{videos.length}</span> completed
+                    </p>
+                  </div>
+                  <h6 className="mb-0 badge bg-success rounded-pill">
                     {videos.length > 0
                       ? Math.round(((Array.isArray(videos) ? videos.filter(video => video.watched).length : 0) / videos.length) * 100)
                       : 0}%
                   </h6>
                 </div>
-                <ProgressBar
-                  variant="primary"
-                  now={videos.length > 0
-                    ? Math.round(((Array.isArray(videos) ? videos.filter(video => video.watched).length : 0) / videos.length) * 100)
-                    : 0}
-                  className="progress-sm bg-opacity-10"
-                />
+                <div className="progress progress-sm bg-light" style={{ height: '6px' }}>
+                  <div
+                    className="progress-bar bg-success"
+                    role="progressbar"
+                    style={{
+                      width: `${videos.length > 0
+                        ? Math.round(((Array.isArray(videos) ? videos.filter(video => video.watched).length : 0) / videos.length) * 100)
+                        : 0}%`,
+                      height: '6px'
+                    }}
+                    aria-valuenow={videos.length > 0
+                      ? Math.round(((Array.isArray(videos) ? videos.filter(video => video.watched).length : 0) / videos.length) * 100)
+                      : 0}
+                    aria-valuemin="0"
+                    aria-valuemax="100"
+                  ></div>
+                </div>
               </div>
 
               {videos.map((video, idx) => {
                 // Only the first lecture is accessible, others are locked
-                if (idx === 0) {
+                if (idx === 0 || video.isDemoLecture) {
                   return (
-                    <Fragment key={video.id}>
+                    <Fragment key={video.id || idx}>
                       {video.id === selectedVideo?.id ? (
-                        <div className="p-2 bg-success bg-opacity-10 rounded-3">
+                        <div className="p-2 bg-success bg-opacity-10 rounded-3 border border-success">
                           <div className="d-flex justify-content-between align-items-center">
                             <div className="position-relative d-flex align-items-center">
                               <Button
@@ -86,22 +101,21 @@ const Playlist = ({ course, onVideoSelect }) => {
                               >
                                 <FaPlay className="me-0" size={11} />
                               </Button>
-                              <span className="d-inline-block text-truncate ms-2 mb-0 h6 fw-light w-200px">
+                              <span className="d-inline-block text-truncate ms-2 mb-0 h6 fw-bold text-success w-200px">
                                 {video.title}
                               </span>
                             </div>
-                            <p className="mb-0 text-truncate">Playing</p>
+                            <p className="mb-0 text-truncate badge bg-success text-white">Playing</p>
                           </div>
                         </div>
                       ) : (
-                        <div className="d-flex justify-content-between align-items-center">
+                        <div className="d-flex justify-content-between align-items-center p-2 rounded-3 hover-bg-light">
                           <div className="position-relative d-flex align-items-center">
                             <Button
-                              variant="danger-soft"
+                              variant="primary"
                               size="sm"
-                              className="btn btn-round mb-0 stretched-link position-static"
+                              className="btn btn-round btn-sm mb-0 stretched-link"
                               onClick={() => handleVideoClick(video)}
-                              disabled={!video.videoUrl}
                             >
                               <FaPlay className="me-0" size={11} />
                             </Button>
@@ -109,7 +123,7 @@ const Playlist = ({ course, onVideoSelect }) => {
                               {video.title}
                             </span>
                           </div>
-                          <p className="mb-0 text-truncate">
+                          <p className="mb-0 text-truncate badge bg-light text-dark">
                             {video.duration || "10:00"}
                           </p>
                         </div>
@@ -119,24 +133,24 @@ const Playlist = ({ course, onVideoSelect }) => {
                 } else {
                   // Locked lecture
                   return (
-                    <Fragment key={video.id}>
-                      <div className="p-2 bg-light rounded-3">
+                    <Fragment key={video.id || idx}>
+                      <div className="p-2 bg-light rounded-3 border border-light">
                         <div className="d-flex justify-content-between align-items-center">
                           <div className="position-relative d-flex align-items-center">
                             <Button
-                              variant="secondary-soft"
+                              variant="secondary"
                               size="sm"
                               className="btn btn-round mb-0 position-static"
                               disabled={true}
                             >
-                              <i className="fas fa-lock me-0" size={11}></i>
+                              <FaLock className="me-0" size={11} />
                             </Button>
                             <span className="d-inline-block text-truncate ms-2 mb-0 h6 fw-light w-200px text-muted">
                               {video.title}
                             </span>
                           </div>
-                          <p className="mb-0 text-truncate text-muted">
-                            {video.duration || "10:00"}
+                          <p className="mb-0 text-truncate badge bg-secondary text-white">
+                            Locked
                           </p>
                         </div>
                       </div>

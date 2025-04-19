@@ -1,6 +1,6 @@
 // src/app/components/EditProfile.jsx
 'use client';
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form'; // Import useFieldArray
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
@@ -11,10 +11,13 @@ import axios from 'axios';
 import { toast } from 'react-hot-toast'; // Import toast
 import { checkIsLoggedInUser } from "@/helpers/checkLoggedInUser"; // Import your function
 import IconTextFormInput from '@/components/form/IconTextFormInput'; // Import
-import { FaUser } from 'react-icons/fa'; // Import icons
+import { FaUser, FaPhone } from 'react-icons/fa'; // Import icons
 import defaultImage from '../../../../assets/images/avatar/11.jpg';
 import axiosInstance from '@/utils/axiosInstance';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/context/AuthContext'; // Import useAuth hook
+import authService from '@/services/authService'; // Import authService
+import ProfileSkeleton from '@/components/skeletons/ProfileSkeleton';
 
 // --- Validation Schema ---
 const profileSchema = yup.object({
@@ -41,7 +44,10 @@ const EditProfile = () => {
   const fileInputRef = useRef(null);
   const router = useRouter();
 
-  const { register, handleSubmit, formState: { errors, isDirty, dirtyFields }, setValue, reset, control } = useForm({
+  // Use the auth context
+  const { refreshUser } = useAuth();
+
+  const { register, handleSubmit, formState: { errors, isDirty, dirtyFields }, setValue, getValues, reset, control } = useForm({
     resolver: yupResolver(profileSchema),
   });
 
@@ -59,7 +65,22 @@ const EditProfile = () => {
       setError(null);
 
       try {
-        // Get user data from localStorage only
+        // Try to get the latest user data from the server first
+        try {
+          const response = await axios.get('/api/user/profile');
+          if (response.data && response.data.success && response.data.user) {
+            // Update local user data with server data
+            const serverUserData = response.data.user;
+            authService.setUser(serverUserData);
+            await refreshUser();
+            console.log('Updated user data from server:', serverUserData);
+          }
+        } catch (serverError) {
+          console.warn('Could not fetch latest user data from server:', serverError);
+          // Continue with local data
+        }
+
+        // Get user data from localStorage as fallback
         const { user, token, error } = await checkIsLoggedInUser();
 
         if (error) {
@@ -99,13 +120,23 @@ const EditProfile = () => {
           }))
           : [{ degree: '', institution: '' }];
 
+        // Log the user data for debugging
+        console.log('User data for form reset:', {
+          fullName: user.fullName || user.name,
+          email: user.email,
+          phoneNo: user.phoneNo || 'Not provided',
+          aboutMe: user.aboutMe ? 'Provided' : 'Not provided',
+          hasProfilePicture: !!user.profilePicture,
+          educationCount: educationData.length
+        });
+
         reset({
           fullName: user.fullName || user.name,
           email: user.email,
-          location: user.location,
-          phoneNo: user.phoneNo,
-          aboutMe: user.aboutMe,
-          profilePicture: user.profilePicture,
+          location: user.location || '',
+          phoneNo: user.phoneNo || '',
+          aboutMe: user.aboutMe || '',
+          profilePicture: user.profilePicture || '',
           education: educationData,
         });
 
@@ -132,47 +163,153 @@ const EditProfile = () => {
       const storedUserData = localStorage.getItem('user_data');
       let userData = storedUserData ? JSON.parse(storedUserData) : {};
 
-      // Update user data with form values
-      userData = {
+      // Create updated user data
+      const updatedUserData = {
         ...userData,
         fullName: data.fullName,
         name: data.fullName, // Keep name and fullName in sync
-        phoneNo: data.phoneNo,
-        aboutMe: data.aboutMe,
+        // Explicitly handle phoneNo and aboutMe to ensure they're saved even if empty
+        phoneNo: data.phoneNo !== undefined ? data.phoneNo : '',
+        aboutMe: data.aboutMe !== undefined ? data.aboutMe : '',
         location: data.location,
       };
 
       // Handle profilePicture separately
       if (image !== userData.profilePicture) {
-        userData.profilePicture = image;
+        updatedUserData.profilePicture = image;
       }
 
       // Handle education data
       if (data.education) {
-        userData.education = data.education.map(edu => ({
+        updatedUserData.education = data.education.map(edu => ({
           degree: edu.degree || '',
           institution: edu.institution || ''
         }));
       }
 
-      console.log('Updated user data:', userData);
+      console.log('Updated user data:', {
+        fullName: updatedUserData.fullName,
+        phoneNo: updatedUserData.phoneNo,
+        aboutMe: updatedUserData.aboutMe,
+        hasProfilePicture: !!updatedUserData.profilePicture,
+        profilePictureLength: updatedUserData.profilePicture ? updatedUserData.profilePicture.substring(0, 30) + '...' : 'none'
+      });
 
-      // Save updated user data to localStorage
-      localStorage.setItem('user_data', JSON.stringify(userData));
+      // Show loading toast
+      toast.loading('Updating profile...', { id: 'profile-update' });
 
-      // Update state
-      setUser(userData);
+      // Make API call to update user profile
+      try {
+        // Ensure we have a user ID
+        const userId = userData.id || userData.userId || user?.id || user?.userId;
 
-      // Show success message
-      toast.success('Profile updated successfully!');
+        console.log('Sending profile update with user ID:', userId || 'No ID available');
 
-      // Refresh the page to show updated data
-      setTimeout(() => {
-        window.location.reload();
-      }, 1000);
+        // Ensure profile picture is included
+        if (image) {
+          console.log('Including profile picture in update, length:', image.length);
+          updatedUserData.profilePicture = image;
+        }
+
+        const response = await axios.post('/api/user/update-profile', {
+          userId: userId,
+          userData: {
+            ...updatedUserData,
+            id: userId, // Include ID in userData as well for redundancy
+            userId: userId, // Include userId in userData as well for redundancy
+            token: authService.getToken() // Include the auth token
+          }
+        });
+
+        if (response.data.success) {
+          // Update local storage with new user data
+          const updatedUser = response.data.user || updatedUserData;
+
+          // Ensure all fields are properly set
+          const finalUserData = {
+            ...updatedUser,
+            // Ensure these fields are always strings, even if empty
+            phoneNo: updatedUser.phoneNo !== undefined ? updatedUser.phoneNo : '',
+            aboutMe: updatedUser.aboutMe !== undefined ? updatedUser.aboutMe : '',
+            // Keep name and fullName in sync
+            name: updatedUser.fullName || updatedUser.name,
+            fullName: updatedUser.fullName || updatedUser.name
+          };
+
+          // Update local storage with the final user data
+          localStorage.setItem('user_data', JSON.stringify(finalUserData));
+
+          // Also update auth_user in localStorage for AuthContext
+          localStorage.setItem('auth_user', JSON.stringify(finalUserData));
+
+          // Update state
+          setUser(finalUserData);
+
+          // Also update auth context by refreshing user data
+          try {
+            if (refreshUser) {
+              console.log('Refreshing user data after profile update');
+              await refreshUser();
+            }
+          } catch (refreshError) {
+            console.error('Error refreshing user data after profile update:', refreshError);
+          }
+
+          // Show success message
+          toast.success('Profile updated successfully!', { id: 'profile-update' });
+        } else {
+          toast.error(response.data.message || 'Failed to update profile', { id: 'profile-update' });
+          throw new Error(response.data.message || 'Failed to update profile');
+        }
+      } catch (apiError) {
+        console.error('API error:', apiError);
+        console.error('Error details:', apiError.response?.data || apiError.message);
+
+        // Fallback: Update local storage even if API fails
+        console.log('API failed, updating user data locally:', {
+          fullName: updatedUserData.fullName,
+          phoneNo: updatedUserData.phoneNo,
+          aboutMe: updatedUserData.aboutMe,
+          hasProfilePicture: !!updatedUserData.profilePicture,
+          profilePictureLength: updatedUserData.profilePicture ? updatedUserData.profilePicture.substring(0, 30) + '...' : 'none'
+        });
+
+        // Ensure all fields are properly set
+        const fallbackUserData = {
+          ...updatedUserData,
+          // Ensure these fields are always strings, even if empty
+          phoneNo: updatedUserData.phoneNo !== undefined ? updatedUserData.phoneNo : '',
+          aboutMe: updatedUserData.aboutMe !== undefined ? updatedUserData.aboutMe : '',
+          // Keep name and fullName in sync
+          name: updatedUserData.fullName || updatedUserData.name,
+          fullName: updatedUserData.fullName || updatedUserData.name
+        };
+
+        // Update local storage with the fallback user data
+        localStorage.setItem('user_data', JSON.stringify(fallbackUserData));
+
+        // Also update auth_user in localStorage for AuthContext
+        localStorage.setItem('auth_user', JSON.stringify(fallbackUserData));
+
+        // Update state
+        setUser(fallbackUserData);
+
+        // Also update auth context by refreshing user data
+        try {
+          if (refreshUser) {
+            console.log('Refreshing user data after local profile update');
+            await refreshUser();
+          }
+        } catch (refreshError) {
+          console.error('Error refreshing user data after local profile update:', refreshError);
+        }
+
+        toast.error('Profile updated locally, but server update failed', { id: 'profile-update' });
+      }
     } catch (error) {
       console.error('Profile update error:', error);
       setError('Failed to update profile: ' + (error.message || 'Unknown error'));
+      toast.error('Failed to update profile: ' + (error.message || 'Unknown error'), { id: 'profile-update' });
     } finally {
       setLoading(false);
     }
@@ -182,39 +319,118 @@ const EditProfile = () => {
     const file = e.target.files?.[0];
     if (file) {
       try {
-        if (file.size > 1024 * 1024 * 2) { // 2MB limit
-          toast.error('Image size exceeds 2MB');
+        if (file.size > 1024 * 1024 * 5) { // 5MB limit
+          toast.error('Image size exceeds 5MB');
           return; // Stop processing
         }
 
-        // Convert to base64 for preview and storage
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          const base64String = reader.result;
-          setValue('profilePicture', base64String);
-          setImage(base64String); // Update preview
+        // Show loading toast
+        toast.loading('Processing image...', { id: 'upload-image' });
 
-          // Store in form data
-          console.log('Image processed successfully');
+        // Convert to base64 for storage
+        const reader = new FileReader();
+        reader.onloadend = async () => {
+          const base64String = reader.result;
+
+          // Set the image in state and form
+          setImage(base64String);
+          setValue('profilePicture', base64String);
+
+          // Get current user data from localStorage
+          try {
+            const storedUserData = localStorage.getItem('user_data');
+            let userData = storedUserData ? JSON.parse(storedUserData) : {};
+
+            // Update only the profile picture
+            userData.profilePicture = base64String;
+
+            // Save back to localStorage
+            localStorage.setItem('user_data', JSON.stringify(userData));
+
+            // Also update auth_user in localStorage for AuthContext
+            localStorage.setItem('auth_user', JSON.stringify(userData));
+
+            // Also update auth context by refreshing user data
+            try {
+              // Use the refreshUser function from the auth context
+              if (refreshUser) {
+                console.log('Refreshing user data after profile picture update');
+                await refreshUser();
+              }
+            } catch (refreshError) {
+              console.error('Error refreshing user data:', refreshError);
+            }
+
+            // Show success message
+            toast.success('Profile picture updated', { id: 'upload-image' });
+
+            console.log('Profile picture saved locally, length:', base64String.length);
+          } catch (error) {
+            console.error('Error saving profile picture locally:', error);
+            toast.error('Failed to save profile picture', { id: 'upload-image' });
+          }
         };
         reader.readAsDataURL(file);
       } catch (error) {
         console.error('Error handling image:', error);
-        toast.error('Failed to process image');
+        toast.error('Failed to process image', { id: 'upload-image' });
       }
     }
   };
-  const removeImage = () => {
+  const removeImage = async () => {
     setImage(null);
     setValue('profilePicture', null);
+
+    // Also update localStorage
+    try {
+      const storedUserData = localStorage.getItem('user_data');
+      if (storedUserData) {
+        const userData = JSON.parse(storedUserData);
+        userData.profilePicture = null;
+        localStorage.setItem('user_data', JSON.stringify(userData));
+
+        // Also update auth_user in localStorage for AuthContext
+        localStorage.setItem('auth_user', JSON.stringify(userData));
+
+        // Also update auth context by refreshing user data
+        try {
+          // Use the refreshUser function from the auth context
+          if (refreshUser) {
+            console.log('Refreshing user data after profile picture removal');
+            await refreshUser();
+          }
+        } catch (refreshError) {
+          console.error('Error refreshing user data:', refreshError);
+        }
+
+        toast.success('Profile picture removed');
+      }
+    } catch (error) {
+      console.error('Error removing profile picture from localStorage:', error);
+    }
   };
 
   if (loading) {
-    return <div>Loading...</div>;
+    return <ProfileSkeleton />;
   }
 
   if (error) {
-    return <div>Error: {error}</div>;
+    return (
+      <Card className="bg-transparent border rounded-3">
+        <CardBody>
+          <div className="text-center py-5">
+            <h3 className="text-danger">Error</h3>
+            <p>{error}</p>
+            <button
+              className="btn btn-primary mt-3"
+              onClick={() => window.location.reload()}
+            >
+              Try Again
+            </button>
+          </div>
+        </CardBody>
+      </Card>
+    );
   }
 
 
@@ -280,15 +496,29 @@ const EditProfile = () => {
                 />
               </Col>
               <Col md={6}>
-                <label className="form-label">Phone number *</label>
-                <input className="form-control" type="tel" placeholder="Phone Number" {...register("phoneNo")} />
-                {errors.phoneNo && <div className='invalid-feedback d-block'>{errors.phoneNo.message}</div>}
+                <IconTextFormInput
+                  control={control}
+                  icon={FaPhone}
+                  placeholder='Phone Number'
+                  label='Phone number *'
+                  name='phoneNo'
+                  error={errors.phoneNo?.message}
+                />
               </Col>
               <Col xs={12}>
                 <Form.Label className="form-label">About me</Form.Label>
-                <textarea className="form-control" rows={3} {...register("aboutMe")} />
+                <textarea
+                  className="form-control"
+                  rows={3}
+                  {...register("aboutMe")}
+                  onChange={(e) => {
+                    // Log the value for debugging
+                    console.log('About me input changed:', e.target.value);
+                    // Use the register's onChange handler
+                    register("aboutMe").onChange(e);
+                  }}
+                />
                 <div className="form-text">Brief description for your profile.</div>
-
               </Col>
               <Col xs={12}>
                 <Form.Label className="form-label">Education</Form.Label>
