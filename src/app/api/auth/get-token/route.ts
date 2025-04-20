@@ -2,26 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(request: NextRequest) {
     try {
-        // Try to get token from HTTP-only cookie first
-        const httpOnlyToken = request.cookies.get('token');
-
-        // Then try client-accessible cookie
-        const clientToken = request.cookies.get('auth_token');
-
-        // Use whichever token is available
-        const token = httpOnlyToken?.value || clientToken?.value || '';
-
-        if (!token) {
-            console.log('No token found in cookies');
-            return NextResponse.json({
-                success: false,
-                message: "No token found"
-            }, { status: 404 });
-        }
+        // For mock system, always return a mock token
+        const mockToken = 'mock_token_123456789';
 
         return NextResponse.json({
             success: true,
-            token: token
+            token: mockToken
         });
 
     } catch (error) {

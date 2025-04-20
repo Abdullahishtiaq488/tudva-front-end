@@ -2,11 +2,12 @@
 
 import React from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { FaPlay } from 'react-icons/fa';
 import styles from './CoursePreview.module.css';
 
 
-const CoursesPreview = ({ title, module, imageUrl, number }) => {
+const CoursesPreview = ({ title, module, imageUrl, number, courseId }) => {
     return (
         <>
             <div key={number} className='d-flex pb-2'>
@@ -23,22 +24,36 @@ const CoursesPreview = ({ title, module, imageUrl, number }) => {
                             className={styles.courseImage}
                         />
                         <div className={`${styles.playButtonContainer} ms-3 d-flex d-md-none`}>
-                            <button className={`${styles.playButton} btn btn-light mb-0`} aria-label="Play">
+                            <button
+                                className={`${styles.playButton} btn btn-light mb-0`}
+                                aria-label="Play"
+                                onClick={() => { if (courseId) window.location.href = `/course/${courseId}`; }}
+                            >
                                 <FaPlay size={24} className={styles.playIcon + ' '} />
                             </button>
                         </div>
                     </div>
                     <div className={`${styles.courseInfo} flex-grow-1 text-start text-md-center`}>
-                        <h2 className={`${styles.courseTitle} h5`}>{title}</h2>
+                        <h2 className={`${styles.courseTitle} h5`}>
+                            {courseId ? (
+                                <Link href={`/course/${courseId}`}>{title}</Link>
+                            ) : (
+                                title
+                            )}
+                        </h2>
                         <p className={`${styles.courseModule} mb-0`}>{module}</p>
                     </div>
                     <div className={`${styles.playButtonContainer} ms-3 d-none d-md-flex`}>
-                        <button className={`${styles.playButton} btn btn-light mb-0`} aria-label="Play">
+                        <button
+                            className={`${styles.playButton} btn btn-light mb-0`}
+                            aria-label="Play"
+                            onClick={() => { if (courseId) window.location.href = `/course/${courseId}`; }}
+                        >
                             <FaPlay size={24} className={styles.playIcon} />
                         </button>
                     </div>
                 </div>
-            </div>
+            </div >
         </>
     );
 };

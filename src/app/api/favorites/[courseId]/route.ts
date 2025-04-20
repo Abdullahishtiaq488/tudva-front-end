@@ -1,9 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
-import axios from 'axios';
+import ensureMockSystemInitialized from '../../mock-init';
+import { wishlistService } from '@/mocks/services';
+import { ApiError } from '@/mocks/utils/errors';
+import { getItem } from '@/mocks/utils/storage';
 
-// Helper function to get the backend URL
-const getBackendUrl = () => {
-  return process.env.NEXT_PUBLIC_BACKEND_BASE_URL || 'http://localhost:3001';
+// Helper function to extract user ID from auth token
+const getUserIdFromToken = (authHeader: string | null): string | null => {
+  if (!authHeader) return null;
+
+  // In a real app, you would decode the JWT token
+  // For our mock system, we'll get the user from storage
+  const userData = getItem<{ id?: string }>('user_data');
+  return userData?.id || null;
 };
 
 // GET /api/favorites/[courseId] - Check if a course is in favorites
@@ -11,36 +19,66 @@ export async function GET(
   request: NextRequest,
   { params }: { params: { courseId: string } }
 ) {
-  const courseId = params.courseId;
-  const authHeader = request.headers.get('Authorization');
-  
-  if (!authHeader) {
-    return NextResponse.json({
-      error: 'Authorization header is required',
-      success: false,
-      isFavorite: false
-    }, { status: 401 });
-  }
-
   try {
-    const backendResponse = await axios.get(
-      `${getBackendUrl()}/api/favorites/${courseId}`,
-      {
-        headers: {
-          'Authorization': authHeader
-        },
-        timeout: 5000 // 5 second timeout
-      }
-    );
+    // Initialize mock system
+    ensureMockSystemInitialized();
 
-    return NextResponse.json(backendResponse.data, { status: 200 });
-  } catch (error: any) {
-    console.error('Error checking favorite status from backend:', error.message);
+    const courseId = params.courseId;
+    const authHeader = request.headers.get('Authorization');
+
+    if (!authHeader) {
+      return NextResponse.json({
+        error: 'Authorization header is required',
+        success: false,
+        isFavorite: false
+      }, { status: 401 });
+    }
+
+    // Get user ID from token
+    const userId = getUserIdFromToken(authHeader);
+    if (!userId) {
+      return NextResponse.json({
+        error: 'Invalid authentication token',
+        success: false,
+        isFavorite: false
+      }, { status: 401 });
+    }
+
+    console.log(`Checking if course ${courseId} is in favorites for user ${userId}`);
+
+    // Call mock service (reuse wishlist service for favorites)
+    try {
+      const response = await wishlistService.isInWishlist(userId, courseId);
+
+      // Return success response
+      return NextResponse.json({
+        success: true,
+        isFavorite: response.data?.inWishlist || false
+      }, { status: 200 });
+    } catch (error) {
+      if (error instanceof ApiError) {
+        return NextResponse.json({
+          success: false,
+          error: error.message,
+          isFavorite: false // Default to false on error
+        }, { status: error.status });
+      }
+
+      // Handle unexpected errors
+      console.error('Error checking favorite status:', error);
+      return NextResponse.json({
+        success: false,
+        error: 'An unexpected error occurred',
+        isFavorite: false // Default to false on error
+      }, { status: 500 });
+    }
+  } catch (error) {
+    console.error('Error processing favorite check request:', error);
     return NextResponse.json({
-      error: error.message || 'Failed to check favorite status',
+      error: 'An unexpected error occurred',
       success: false,
-      isFavorite: false
-    }, { status: error.response?.status || 500 });
+      isFavorite: false // Default to false on error
+    }, { status: 500 });
   }
 }
 
@@ -49,33 +87,60 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: { courseId: string } }
 ) {
-  const courseId = params.courseId;
-  const authHeader = request.headers.get('Authorization');
-  
-  if (!authHeader) {
-    return NextResponse.json({
-      error: 'Authorization header is required',
-      success: false
-    }, { status: 401 });
-  }
-
   try {
-    const backendResponse = await axios.delete(
-      `${getBackendUrl()}/api/favorites/${courseId}`,
-      {
-        headers: {
-          'Authorization': authHeader
-        },
-        timeout: 5000 // 5 second timeout
-      }
-    );
+    // Initialize mock system
+    ensureMockSystemInitialized();
 
-    return NextResponse.json(backendResponse.data, { status: 200 });
-  } catch (error: any) {
-    console.error('Error removing from favorites from backend:', error.message);
+    const courseId = params.courseId;
+    const authHeader = request.headers.get('Authorization');
+
+    if (!authHeader) {
+      return NextResponse.json({
+        error: 'Authorization header is required',
+        success: false
+      }, { status: 401 });
+    }
+
+    // Get user ID from token
+    const userId = getUserIdFromToken(authHeader);
+    if (!userId) {
+      return NextResponse.json({
+        error: 'Invalid authentication token',
+        success: false
+      }, { status: 401 });
+    }
+
+    console.log(`Removing course ${courseId} from favorites for user ${userId}`);
+
+    // Call mock service (reuse wishlist service for favorites)
+    try {
+      const response = await wishlistService.removeFromWishlist(userId, courseId);
+
+      // Return success response
+      return NextResponse.json({
+        success: true,
+        message: 'Course removed from favorites'
+      }, { status: 200 });
+    } catch (error) {
+      if (error instanceof ApiError) {
+        return NextResponse.json({
+          success: false,
+          error: error.message
+        }, { status: error.status });
+      }
+
+      // Handle unexpected errors
+      console.error('Error removing from favorites:', error);
+      return NextResponse.json({
+        success: false,
+        error: 'An unexpected error occurred'
+      }, { status: 500 });
+    }
+  } catch (error) {
+    console.error('Error processing favorite remove request:', error);
     return NextResponse.json({
-      error: error.message || 'Failed to remove from favorites',
+      error: 'An unexpected error occurred',
       success: false
-    }, { status: error.response?.status || 500 });
+    }, { status: 500 });
   }
 }

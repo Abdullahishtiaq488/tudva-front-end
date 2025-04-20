@@ -17,6 +17,7 @@ import defaultImage from '../../../../assets/images/avatar/11.jpg';
 import axiosInstance from '@/utils/axiosInstance';
 import { useRouter } from 'next/navigation';
 import ProfileSkeleton from '@/components/skeletons/ProfileSkeleton';
+import { users } from '@/data/mockData'; // Import users from mock data
 
 // --- Validation Schema ---
 const profileSchema = yup.object({
@@ -53,9 +54,38 @@ const EditProfile = () => {
       setError(null);
 
       try {
-        if (!user) {
-          setError('User not found');
-          return;
+        // Use mock data if user is not logged in
+        let userData = user;
+        if (!userData) {
+          console.log('Using mock user data for profile editing');
+          // Get user data from mock data
+          try {
+            const instructors = users.filter(user => user.role === 'instructor');
+            userData = instructors[0] || {
+              id: '2',
+              email: 'instructor1@example.com',
+              fullName: 'John Instructor',
+              role: 'instructor',
+              profilePicture: '/assets/images/avatar/02.jpg',
+              aboutMe: 'I am an experienced instructor with expertise in web development.',
+              phoneNo: '+1234567890',
+              location: 'San Francisco, USA',
+              createdAt: '2022-05-10'
+            };
+          } catch (mockDataError) {
+            console.error('Error fetching mock user data:', mockDataError);
+            userData = {
+              id: '2',
+              email: 'instructor1@example.com',
+              fullName: 'John Instructor',
+              role: 'instructor',
+              profilePicture: '/assets/images/avatar/02.jpg',
+              aboutMe: 'I am an experienced instructor with expertise in web development.',
+              phoneNo: '+1234567890',
+              location: 'San Francisco, USA',
+              createdAt: '2022-05-10'
+            };
+          }
         }
 
         // Try to get the latest user data from the server
@@ -75,19 +105,19 @@ const EditProfile = () => {
 
         // Initialize form with user data
         reset({
-          fullName: user.fullName || user.name,
-          email: user.email,
-          phoneNo: user.phoneNo || '',
-          aboutMe: user.aboutMe || '',
-          profilePicture: user.profilePicture || '',
+          fullName: userData.fullName || userData.name,
+          email: userData.email,
+          phoneNo: userData.phoneNo || '',
+          aboutMe: userData.aboutMe || '',
+          profilePicture: userData.profilePicture || '',
         });
 
         // Set profile image if available
-        if (user.profilePicture) {
-          setImage(user.profilePicture);
+        if (userData.profilePicture) {
+          setImage(userData.profilePicture);
         }
 
-        console.log('Form initialized with user data:', user);
+        console.log('Form initialized with user data:', userData);
       } catch (error) {
         console.error('Error initializing form:', error);
         setError('Failed to load user data');
@@ -96,13 +126,8 @@ const EditProfile = () => {
       }
     };
 
-    // Only initialize when user data is available and not loading
-    if (!authLoading && user) {
-      initializeForm();
-    } else if (!authLoading && !user) {
-      setError('Not authenticated');
-      setLoading(false);
-    }
+    // Always initialize the form, using mock data if needed
+    initializeForm();
   }, [user, authLoading, reset, refreshUser]);
 
 
@@ -110,13 +135,35 @@ const EditProfile = () => {
     setError(null);
     setLoading(true);
     try {
-      if (!user || !user.id) {
-        throw new Error('User not authenticated');
+      // Use mock data if user is not logged in
+      let userData = user;
+      if (!userData) {
+        console.log('Using mock user data for profile update');
+        // Get user data from mock data
+        try {
+          const instructors = users.filter(user => user.role === 'instructor');
+          userData = instructors[0] || {
+            id: '2',
+            email: 'instructor1@example.com',
+            fullName: 'John Instructor',
+            role: 'instructor',
+            profilePicture: '/assets/images/avatar/02.jpg'
+          };
+        } catch (mockDataError) {
+          console.error('Error fetching mock user data:', mockDataError);
+          userData = {
+            id: '2',
+            email: 'instructor1@example.com',
+            fullName: 'John Instructor',
+            role: 'instructor',
+            profilePicture: '/assets/images/avatar/02.jpg'
+          };
+        }
       }
 
       // Create updated user data
       const updatedUserData = {
-        ...user,
+        ...userData,
         fullName: data.fullName,
         name: data.fullName, // Keep name and fullName in sync
         phoneNo: data.phoneNo,
@@ -124,7 +171,7 @@ const EditProfile = () => {
       };
 
       // Handle profilePicture separately
-      if (image !== user.profilePicture) {
+      if (image !== userData.profilePicture) {
         updatedUserData.profilePicture = image;
       }
 
@@ -134,7 +181,7 @@ const EditProfile = () => {
       try {
         // Make API call to update user profile
         const response = await axios.post('/api/user/update-profile', {
-          userId: user.id,
+          userId: userData.id,
           userData: updatedUserData
         });
 

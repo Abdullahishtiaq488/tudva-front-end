@@ -1,49 +1,55 @@
-import axios from "axios";
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from 'next/server';
+import ensureMockSystemInitialized from '../../mock-init';
+import { authService } from '@/mocks/services';
+import { ApiError } from '@/mocks/utils/errors';
 
 export async function POST(request: NextRequest) {
   try {
+    // Initialize mock system
+    ensureMockSystemInitialized();
+
+    // Parse request body
     const reqBody = await request.json();
+    const { email, password } = reqBody;
     console.log('Login request received');
 
+    // Validate required fields
+    if (!email || !password) {
+      return NextResponse.json({
+        success: false,
+        error: 'Email and password are required',
+      }, { status: 400 });
+    }
+
+    // Attempt login
     try {
-      // Simple direct call to backend
-      const backendResponse = await axios.post(
-        `${process.env.NEXT_PUBLIC_BACKEND_BASE_URL || 'http://localhost:3001'}/api/user/login`,
-        reqBody,
-        { timeout: 10000 } // 10 second timeout
-      );
+      const response = await authService.login(email, password);
 
-      // If we get here, the login was successful
-      const responseData = backendResponse.data;
-      const token = responseData.token || '';
-      const user = responseData.user || {};
-
-      // Create a minimal response
+      // Return success response with the same structure as before
       return NextResponse.json({
         message: "Logged In Success",
         success: true,
-        data: {
-          id: user.id,
-          email: user.email,
-          name: user.name || user.fullName,
-          role: user.role
-        }
+        data: response.data?.user
       }, { status: 200 });
-
     } catch (error) {
-      console.error('Backend login error:', error.message);
+      if (error instanceof ApiError) {
+        return NextResponse.json({
+          message: "Login failed",
+          success: false,
+          error: error.message
+        }, { status: error.status });
+      }
 
-      // Create a fallback response for testing
+      // Handle unexpected errors
+      console.error('Login error:', error);
       return NextResponse.json({
         message: "Login failed",
         success: false,
-        error: error.message || 'An unexpected error occurred'
+        error: 'An unexpected error occurred'
       }, { status: 500 });
     }
   } catch (error) {
-    console.error('API route error:', error);
-
+    console.error('Error processing login request:', error);
     return NextResponse.json({
       error: 'An unexpected error occurred',
       success: false

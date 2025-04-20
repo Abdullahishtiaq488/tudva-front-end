@@ -2,9 +2,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { Card, Row, Col, Button, Badge, Spinner, Alert } from 'react-bootstrap';
-import { FaCalendarAlt, FaChevronLeft, FaChevronRight, FaClock, FaVideo, FaChalkboardTeacher, FaLock, FaUnlock, FaExclamationTriangle } from 'react-icons/fa';
+import { FaCalendarAlt, FaChevronLeft, FaChevronRight, FaClock, FaVideo, FaLock, FaUnlock, FaExclamationTriangle, FaTree, FaWifi, FaHtml5, FaJs, FaPython } from 'react-icons/fa';
 import { toast } from 'react-hot-toast';
 import { isLectureAccessible } from '@/utils/lectureAccess';
+import { lectureSchedules, timeSlots as mockTimeSlots } from '@/data/mockData';
 
 const WeeklyCalendar = ({ enrolledCourses = [] }) => {
   const [currentWeek, setCurrentWeek] = useState([]);
@@ -14,34 +15,28 @@ const WeeklyCalendar = ({ enrolledCourses = [] }) => {
   const [draggedSchedule, setDraggedSchedule] = useState(null);
   const [isRescheduling, setIsRescheduling] = useState(false);
 
-  // Time slots reference
-  const timeSlots = [
-    { id: 1, time: '9:00 AM - 9:45 AM' },
-    { id: 2, time: '9:45 AM - 10:30 AM' },
-    { id: 3, time: '10:30 AM - 11:15 AM' },
-    { id: 4, time: '11:15 AM - 12:00 PM' },
-    { id: 5, time: '12:00 PM - 12:45 PM' },
-    { id: 6, time: '12:45 PM - 1:30 PM' },
-    { id: 7, time: '1:30 PM - 2:15 PM' },
-    { id: 8, time: '2:15 PM - 3:00 PM' },
-    { id: 9, time: '3:00 PM - 3:45 PM' },
-    { id: 10, time: '3:45 PM - 4:30 PM' },
-    { id: 11, time: '4:30 PM - 5:15 PM' },
-  ];
+  // Use time slots from our centralized mock data
+  const timeSlots = mockTimeSlots;
 
-  // Generate current week dates
+  // Generate current week dates (weekdays only - Monday to Friday)
   useEffect(() => {
     const generateWeekDates = () => {
       const today = new Date();
       const currentDay = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
       const weekDates = [];
 
-      // Start from Sunday
+      // Find the Monday of current week
       const startDate = new Date(today);
-      startDate.setDate(today.getDate() - currentDay);
+      // If today is Sunday (0), go to next day (Monday)
+      // If today is Monday-Saturday (1-6), go back to Monday
+      if (currentDay === 0) {
+        startDate.setDate(today.getDate() + 1); // Next day is Monday
+      } else {
+        startDate.setDate(today.getDate() - currentDay + 1); // Go back to Monday
+      }
 
-      // Generate 7 days
-      for (let i = 0; i < 7; i++) {
+      // Generate 5 days (Monday to Friday)
+      for (let i = 0; i < 5; i++) {
         const date = new Date(startDate);
         date.setDate(startDate.getDate() + i);
         weekDates.push({
@@ -59,134 +54,20 @@ const WeeklyCalendar = ({ enrolledCourses = [] }) => {
     generateWeekDates();
   }, []);
 
-  // Fetch lecture schedules for enrolled courses
+  // Simply use lecture schedules directly from mock data
   useEffect(() => {
-    const fetchLectureSchedules = async () => {
-      if (enrolledCourses.length === 0) {
-        setIsLoading(false);
-        return;
-      }
+    // Just set the schedules directly from our mock data
+    setSchedules(lectureSchedules);
+    setIsLoading(false);
+  }, []);
 
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        const allSchedules = [];
-
-        // Fetch schedules for each enrolled course
-        for (const course of enrolledCourses) {
-          try {
-            // Try file-based API first
-            const response = await fetch(`/api/file-lecture-schedules/course/${course.id}`);
-
-            if (!response.ok) {
-              // If file-based API fails, try the database API
-              const dbResponse = await fetch(`/api/lecture-schedules/course/${course.id}`);
-
-              if (!dbResponse.ok) {
-                console.error(`Failed to fetch lecture schedules for course ${course.id}`);
-                continue;
-              }
-
-              const data = await dbResponse.json();
-              if (data.success && data.schedules) {
-                // Add course info to each schedule
-                const courseSchedules = data.schedules.map(schedule => ({
-                  ...schedule,
-                  course: {
-                    id: course.id,
-                    title: course.title,
-                    format: course.format || 'recorded',
-                    image: course.image
-                  }
-                }));
-
-                allSchedules.push(...courseSchedules);
-              }
-            } else {
-              const data = await response.json();
-              if (data.success && data.schedules) {
-                // Add course info to each schedule
-                const courseSchedules = data.schedules.map(schedule => ({
-                  ...schedule,
-                  course: {
-                    id: course.id,
-                    title: course.title,
-                    format: course.format || 'recorded',
-                    image: course.image
-                  }
-                }));
-
-                allSchedules.push(...courseSchedules);
-              }
-            }
-          } catch (err) {
-            console.error(`Error fetching schedules for course ${course.id}:`, err);
-          }
-        }
-
-        setSchedules(allSchedules);
-      } catch (err) {
-        console.error('Error fetching lecture schedules:', err);
-        setError('Failed to load your lecture schedules');
-
-        // Generate mock schedules for demo purposes
-        generateMockSchedules();
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchLectureSchedules();
-  }, [enrolledCourses]);
-
-  // Generate mock schedules for demo purposes
-  const generateMockSchedules = () => {
-    if (enrolledCourses.length === 0) return;
-
-    const mockSchedules = [];
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - 7); // Start a week ago
-
-    for (let i = 0; i < enrolledCourses.length; i++) {
-      const course = enrolledCourses[i];
-
-      for (let j = 0; j < 5; j++) {
-        const lectureDate = new Date(startDate);
-        lectureDate.setDate(startDate.getDate() + (j * 2)); // Spread out over the week
-
-        mockSchedules.push({
-          id: `mock-${i}-${j}`,
-          lecture_id: `lecture-${i}-${j}`,
-          slot_id: ((i + j) % 5) + 1,
-          scheduledDate: lectureDate.toISOString(),
-          isRescheduled: false,
-          lecture: {
-            title: `Lecture ${j + 1}`,
-            moduleName: `Module ${Math.floor(j / 2) + 1}`,
-            durationMinutes: 45,
-            isDemoLecture: j === 0
-          },
-          course: {
-            id: course.id,
-            title: course.title,
-            format: j % 2 === 0 ? 'live' : 'recorded', // Alternate between live and recorded
-            image: course.image
-          }
-        });
-      }
-    }
-
-    setSchedules(mockSchedules);
-  };
-
-  // Navigate to previous week
+  // Navigate to previous week (weekdays only)
   const goToPreviousWeek = () => {
     const firstDay = new Date(currentWeek[0].date);
-    firstDay.setDate(firstDay.getDate() - 7);
+    firstDay.setDate(firstDay.getDate() - 7); // Go back 7 days to previous Monday
 
     const newWeek = [];
-    for (let i = 0; i < 7; i++) {
+    for (let i = 0; i < 5; i++) { // Only 5 days (Monday to Friday)
       const date = new Date(firstDay);
       date.setDate(firstDay.getDate() + i);
       newWeek.push({
@@ -201,13 +82,13 @@ const WeeklyCalendar = ({ enrolledCourses = [] }) => {
     setCurrentWeek(newWeek);
   };
 
-  // Navigate to next week
+  // Navigate to next week (weekdays only)
   const goToNextWeek = () => {
     const firstDay = new Date(currentWeek[0].date);
-    firstDay.setDate(firstDay.getDate() + 7);
+    firstDay.setDate(firstDay.getDate() + 7); // Go forward 7 days to next Monday
 
     const newWeek = [];
-    for (let i = 0; i < 7; i++) {
+    for (let i = 0; i < 5; i++) { // Only 5 days (Monday to Friday)
       const date = new Date(firstDay);
       date.setDate(firstDay.getDate() + i);
       newWeek.push({
@@ -267,17 +148,31 @@ const WeeklyCalendar = ({ enrolledCourses = [] }) => {
     const newDate = new Date(day.date);
     newDate.setHours(0, 0, 0, 0);
 
+    // Check if the day is a weekend
+    const dayOfWeek = newDate.getDay();
+    if (dayOfWeek === 0 || dayOfWeek === 6) { // 0 = Sunday, 6 = Saturday
+      toast.error('Lectures cannot be scheduled on weekends');
+      return;
+    }
+
     // Check if we're trying to reschedule to the same day and time
     const currentDate = new Date(draggedSchedule.scheduledDate);
     currentDate.setHours(0, 0, 0, 0);
 
     if (newDate.getTime() === currentDate.getTime() &&
       parseInt(draggedSchedule.slot_id) === timeSlot.id) {
-      toast.info('Lecture is already scheduled for this time slot');
+      toast('Lecture is already scheduled for this time slot', {
+        icon: '🔔',
+        style: {
+          borderRadius: '10px',
+          background: '#3498db',
+          color: '#fff',
+        },
+      });
       return;
     }
 
-    // Check for conflicts
+    // Check for conflicts - no stacking allowed
     const conflictingSchedule = schedules.find(schedule => {
       const scheduleDate = new Date(schedule.scheduledDate);
       scheduleDate.setHours(0, 0, 0, 0);
@@ -288,7 +183,7 @@ const WeeklyCalendar = ({ enrolledCourses = [] }) => {
     });
 
     if (conflictingSchedule) {
-      toast.error('There is already a lecture scheduled for this time slot');
+      toast.error('There is already a lecture scheduled for this time slot. Only one lecture per slot is allowed.');
       return;
     }
 
@@ -296,42 +191,8 @@ const WeeklyCalendar = ({ enrolledCourses = [] }) => {
     setIsRescheduling(true);
 
     try {
-      // Try file-based API first
-      let response = await fetch(`/api/file-lecture-schedules/update/${draggedSchedule.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          newDate: newDate.toISOString(),
-          newSlotId: timeSlot.id.toString()
-        })
-      });
-
-      // If file-based API fails, try the database API
-      if (!response.ok) {
-        response = await fetch(`/api/lecture-schedules/update/${draggedSchedule.id}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            newDate: newDate.toISOString(),
-            newSlotId: timeSlot.id.toString()
-          })
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || 'Failed to reschedule lecture');
-        }
-      }
-
-      const data = await response.json();
-
-      if (!data.success) {
-        throw new Error(data.message || 'Failed to reschedule lecture');
-      }
+      // Simulate API call with a delay
+      await new Promise(resolve => setTimeout(resolve, 500));
 
       // Update the schedule in the local state
       setSchedules(prevSchedules => {
@@ -522,35 +383,35 @@ const WeeklyCalendar = ({ enrolledCourses = [] }) => {
                             onDragStart={(e) => handleDragStart(e, schedule)}
                             onClick={() => handleLectureClick(schedule)}
                           >
-                            <div className="lecture-title">
-                              {schedule.lecture?.title || 'Untitled Lecture'}
+                            <div className="card-top-bar" style={{ backgroundColor: schedule.course?.color || '#8bc34a' }}>
+                              <div className="menu-icon">≡</div>
+                              <div className="card-icon">
+                                {schedule.course?.icon === 'FaHtml5' && <FaHtml5 />}
+                                {schedule.course?.icon === 'FaJs' && <FaJs />}
+                                {schedule.course?.icon === 'FaPython' && <FaPython />}
+                                {!schedule.course?.icon && <FaTree />}
+                              </div>
                             </div>
-                            <div className="lecture-course">
-                              {schedule.course?.title || 'Unknown Course'}
-                            </div>
-                            <div className="lecture-badges">
-                              {schedule.lecture?.isDemoLecture && (
-                                <Badge bg="warning" className="me-1">Demo</Badge>
-                              )}
-                              <Badge
-                                bg={schedule.course?.format === 'live' ? 'danger' : 'success'}
-                                className="me-1"
-                              >
+                            <div className="lecture-card-content">
+                              <div className="lecture-course-title">
+                                {schedule.course?.title || 'Unknown Course'}
+                              </div>
+
+                              <div className="card-bottom">
+                                <div className="lecture-progress">
+                                  {/* Show lecture number out of total lectures */}
+                                  {`${parseInt(schedule.lecture?.title?.replace('Lecture ', '') || 1)}/10`}
+                                </div>
                                 {schedule.course?.format === 'live' ? (
-                                  <><FaChalkboardTeacher className="me-1" /> Live</>
+                                  <div className="lecture-live-badge">
+                                    <FaWifi className="me-1" /> LIVE
+                                  </div>
                                 ) : (
-                                  <><FaVideo className="me-1" /> Recorded</>
+                                  <div className="lecture-recorded-badge">
+                                    <FaTree className="me-1" /> REC
+                                  </div>
                                 )}
-                              </Badge>
-                              <Badge
-                                bg={accessible ? 'info' : 'secondary'}
-                              >
-                                {accessible ? (
-                                  <><FaUnlock className="me-1" /> Available</>
-                                ) : (
-                                  <><FaLock className="me-1" /> Locked</>
-                                )}
-                              </Badge>
+                              </div>
                             </div>
                           </div>
                         );
@@ -581,7 +442,7 @@ const WeeklyCalendar = ({ enrolledCourses = [] }) => {
           </div>
           <div className="instructions">
             <small className="text-muted">
-              Drag and drop recorded lectures to reschedule them. Live lectures cannot be rescheduled.
+              Drag and drop recorded lectures to reschedule them. Live lectures cannot be rescheduled. Lectures can only be scheduled on weekdays (Monday-Friday).
             </small>
           </div>
         </div>
@@ -656,7 +517,7 @@ const WeeklyCalendar = ({ enrolledCourses = [] }) => {
           min-width: 120px;
           border-right: 1px solid #e9ecef;
           padding: 5px;
-          min-height: 80px;
+          min-height: 125px;
         }
 
         .day-cell.today {
@@ -664,22 +525,38 @@ const WeeklyCalendar = ({ enrolledCourses = [] }) => {
         }
 
         .lecture-card {
-          padding: 8px;
-          border-radius: 4px;
+          border: 1px solid rgba(0, 0, 0, 0.1);
+          border-radius: 0;
           margin-bottom: 5px;
           cursor: pointer;
           font-size: 0.85rem;
-          box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+          box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+          overflow: hidden;
+          position: relative;
+          height: 95px;
+          background-color: #fff;
+          display: flex;
+          flex-direction: column;
         }
 
-        .lecture-card.live {
-          background-color: #f8d7da;
-          border-left: 3px solid #dc3545;
+        .lecture-card .card-top-bar {
+          height: 25px;
+          position: relative;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 0 8px;
         }
 
-        .lecture-card.recorded {
-          background-color: #d1e7dd;
-          border-left: 3px solid #198754;
+        .lecture-card .menu-icon {
+          color: rgba(0, 0, 0, 0.5);
+          font-size: 18px;
+          font-weight: bold;
+        }
+
+        .lecture-card .card-icon {
+          color: rgba(0, 0, 0, 0.6);
+          font-size: 16px;
         }
 
         .lecture-card.accessible {
@@ -694,30 +571,57 @@ const WeeklyCalendar = ({ enrolledCourses = [] }) => {
           border-style: dashed;
         }
 
-        .lecture-title {
-          font-weight: 500;
-          margin-bottom: 2px;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-        }
-
-        .lecture-course {
-          font-size: 0.75rem;
-          margin-bottom: 5px;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-        }
-
-        .lecture-badges {
+        .lecture-card-content {
+          padding: 10px 12px;
+          position: relative;
+          height: calc(100% - 25px);
           display: flex;
-          flex-wrap: wrap;
-          gap: 2px;
+          flex-direction: column;
+          justify-content: space-between;
+          background-color: white;
         }
 
-        .lecture-badges .badge {
-          font-size: 0.65rem;
+        .lecture-card-content .card-bottom {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          width: 100%;
+        }
+
+        .lecture-course-title {
+          font-weight: 600;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          font-size: 1rem;
+          margin-bottom: 8px;
+          line-height: 1.3;
+          padding: 2px 0;
+        }
+
+        .lecture-progress {
+          font-size: 0.8rem;
+          font-weight: 500;
+          color: #333;
+        }
+
+        .lecture-live-badge, .lecture-recorded-badge {
+          display: flex;
+          align-items: center;
+          font-size: 0.7rem;
+          font-weight: 600;
+          padding: 2px 6px;
+          border-radius: 3px;
+        }
+
+        .lecture-live-badge {
+          background-color: #000;
+          color: #fff;
+        }
+
+        .lecture-recorded-badge {
+          background-color: #f8f9fa;
+          color: #333;
         }
 
         .legend {
@@ -742,13 +646,26 @@ const WeeklyCalendar = ({ enrolledCourses = [] }) => {
         }
 
         .legend-color.live {
-          background-color: #f8d7da;
-          border-left: 3px solid #dc3545;
+          background-color: #8bc34a;
+          border: 1px solid rgba(0,0,0,0.1);
+          position: relative;
+        }
+
+        .legend-color.live:after {
+          content: 'LIVE';
+          position: absolute;
+          top: 1px;
+          right: 1px;
+          background-color: #000;
+          color: #fff;
+          font-size: 4px;
+          padding: 1px 2px;
+          border-radius: 1px;
         }
 
         .legend-color.recorded {
-          background-color: #d1e7dd;
-          border-left: 3px solid #198754;
+          background-color: #8bc34a;
+          border: 1px solid rgba(0,0,0,0.1);
         }
 
         .legend-color.accessible {

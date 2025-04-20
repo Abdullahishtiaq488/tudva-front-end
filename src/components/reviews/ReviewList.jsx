@@ -5,7 +5,7 @@ import { Button, Pagination, Spinner, Alert } from 'react-bootstrap';
 import ReviewItem from './ReviewItem';
 import ReviewForm from './ReviewForm';
 import ReviewStats from './ReviewStats';
-import { useReviews } from '@/hooks/useReviews';
+import { useMockReviews } from '@/hooks/useMockReviews';
 import { useAuth } from '@/context/AuthContext';
 
 const ReviewList = ({ courseId }) => {
@@ -24,7 +24,7 @@ const ReviewList = ({ courseId }) => {
     deleteUserReview,
     changePage,
     fetchReviews
-  } = useReviews(courseId);
+  } = useMockReviews(courseId);
 
   // Log the courseId for debugging and fetch reviews when component mounts
   useEffect(() => {

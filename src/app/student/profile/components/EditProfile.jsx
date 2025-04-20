@@ -18,6 +18,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext'; // Import useAuth hook
 import authService from '@/services/authService'; // Import authService
 import ProfileSkeleton from '@/components/skeletons/ProfileSkeleton';
+import { users } from '@/data/mockData'; // Import users from mock data
 
 // --- Validation Schema ---
 const profileSchema = yup.object({
@@ -83,24 +84,48 @@ const EditProfile = () => {
         // Get user data from localStorage as fallback
         const { user, token, error } = await checkIsLoggedInUser();
 
-        if (error) {
-          setError(error || 'Not authenticated');
-          setLoading(false);
-          return;
-        }
-
-        if (!user) {
-          setError('User not found');
-          setLoading(false);
-          return;
+        // Use mock data if user is not logged in
+        let userData = user;
+        if (!userData || error) {
+          console.log('Using mock user data for profile editing');
+          // Get user data from mock data
+          try {
+            const learners = users.filter(user => user.role === 'learner');
+            userData = learners[0] || {
+              id: '4',
+              email: 'learner1@example.com',
+              fullName: 'Alice Learner',
+              role: 'learner',
+              profilePicture: '/assets/images/avatar/04.jpg',
+              aboutMe: 'I am a student interested in learning new skills.',
+              phoneNo: '+1234567890',
+              location: 'New York, USA',
+              education: [{ degree: 'Bachelor of Science', institution: 'University of Example' }],
+              createdAt: '2023-01-15'
+            };
+          } catch (mockDataError) {
+            console.error('Error fetching mock user data:', mockDataError);
+            userData = {
+              id: '4',
+              email: 'learner1@example.com',
+              fullName: 'Alice Learner',
+              role: 'learner',
+              profilePicture: '/assets/images/avatar/04.jpg',
+              aboutMe: 'I am a student interested in learning new skills.',
+              phoneNo: '+1234567890',
+              location: 'New York, USA',
+              education: [{ degree: 'Bachelor of Science', institution: 'University of Example' }],
+              createdAt: '2023-01-15'
+            };
+          }
         }
 
         // Process education data
         let parsedEducation = [{ degree: '', institution: '' }];
-        if (user.education) {
-          parsedEducation = typeof user.education === 'string'
-            ? JSON.parse(user.education)
-            : user.education;
+        if (userData.education) {
+          parsedEducation = typeof userData.education === 'string'
+            ? JSON.parse(userData.education)
+            : userData.education;
 
           // Ensure parsedEducation is an array of objects
           if (!Array.isArray(parsedEducation)) {
@@ -108,13 +133,13 @@ const EditProfile = () => {
           }
         }
 
-        user.education = parsedEducation;
+        userData.education = parsedEducation;
 
-        setUser(user);
-        setToken(token);
+        setUser(userData);
+        setToken(token || 'mock-token');
 
-        const educationData = user.education
-          ? user.education.map((edu) => ({
+        const educationData = userData.education
+          ? userData.education.map((edu) => ({
             degree: edu.degree || '', // Provide default values
             institution: edu.institution || '',
           }))
@@ -122,26 +147,26 @@ const EditProfile = () => {
 
         // Log the user data for debugging
         console.log('User data for form reset:', {
-          fullName: user.fullName || user.name,
-          email: user.email,
-          phoneNo: user.phoneNo || 'Not provided',
-          aboutMe: user.aboutMe ? 'Provided' : 'Not provided',
-          hasProfilePicture: !!user.profilePicture,
+          fullName: userData.fullName || userData.name,
+          email: userData.email,
+          phoneNo: userData.phoneNo || 'Not provided',
+          aboutMe: userData.aboutMe ? 'Provided' : 'Not provided',
+          hasProfilePicture: !!userData.profilePicture,
           educationCount: educationData.length
         });
 
         reset({
-          fullName: user.fullName || user.name,
-          email: user.email,
-          location: user.location || '',
-          phoneNo: user.phoneNo || '',
-          aboutMe: user.aboutMe || '',
-          profilePicture: user.profilePicture || '',
+          fullName: userData.fullName || userData.name,
+          email: userData.email,
+          location: userData.location || '',
+          phoneNo: userData.phoneNo || '',
+          aboutMe: userData.aboutMe || '',
+          profilePicture: userData.profilePicture || '',
           education: educationData,
         });
 
-        if (user.profilePicture) {
-          setImage(user.profilePicture);
+        if (userData.profilePicture) {
+          setImage(userData.profilePicture);
         }
       } catch (error) {
         console.error('Error in fetchData:', error);

@@ -2,7 +2,7 @@ import { useLayoutContext } from "@/context/useLayoutContext";
 import { useAuth } from "@/context/AuthContext";
 import { Dropdown, DropdownDivider, DropdownItem, DropdownMenu, DropdownToggle } from "react-bootstrap";
 import { BsGear, BsInfoCircle, BsPerson, BsPower } from "react-icons/bs";
-import avatar1 from '@/assets/images/avatar/01.jpg';
+import { users } from '@/data/mockData';
 import { toSentenceCase } from "@/utils/change-casing";
 import clsx from "clsx";
 import Link from "next/link";
@@ -45,8 +45,11 @@ const ProfileDropdown = ({ className }) => {
     }
   }
 
+  // Get default avatar from mock data if user is not authenticated
+  const defaultAvatar = users.find(u => u.role === 'learner')?.profilePicture || users[0]?.profilePicture;
+
   // Use user's profile picture if available, otherwise use default avatar
-  const [profilePicture, setProfilePicture] = useState(avatar1);
+  const [profilePicture, setProfilePicture] = useState(user?.profilePicture || defaultAvatar);
   const [imageError, setImageError] = useState(false);
 
   // Default placeholder image for profile

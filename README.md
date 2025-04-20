@@ -1,8 +1,34 @@
-This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# Busnet LMS Frontend
+
+This is a Next.js application for the Busnet Learning Management System (LMS). The application is built with Next.js App Router, TypeScript, and Tailwind CSS.
+
+## Frontend-Only Mode
+
+This project is currently in **frontend-only mode**, which means it does not require a backend server to run. All API calls are handled by a mock system that simulates backend behavior.
+
+### Mock System
+
+The mock system is located in the `src/mocks` directory and includes:
+
+- Mock data for all entities (users, courses, reviews, etc.)
+- Mock service implementations that mimic backend behavior
+- API routes that use the mock services instead of calling a real backend
+
+For more details, see the [Mock System Documentation](./src/mocks/README.md).
 
 ## Getting Started
 
-First, run the development server:
+First, install dependencies:
+
+```bash
+npm install
+# or
+yarn
+# or
+pnpm install
+```
+
+Then, run the development server:
 
 ```bash
 npm run dev
@@ -10,27 +36,43 @@ npm run dev
 yarn dev
 # or
 pnpm dev
-# or
-bun dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Features
 
-This project uses [`next/font`](https://nextjs.org/docs/basic-features/font-optimization) to automatically optimize and load Inter, a custom Google Font.
+- **Authentication**: Login, registration, and profile management
+- **Course Management**: Browse, search, and filter courses
+- **Enrollment**: Enroll in courses and track progress
+- **Reviews**: Read and write course reviews
+- **Wishlist**: Save courses for later
+- **Notifications**: Receive and manage notifications
+
+## Project Structure
+
+```
+src/
+├── app/              # Next.js App Router pages and layouts
+├── components/       # Reusable UI components
+├── hooks/            # Custom React hooks
+├── mocks/            # Mock data and services
+├── styles/           # Global styles and Tailwind config
+└── utils/            # Utility functions
+```
+
+## Future Integration with Backend
+
+When you're ready to connect to a real backend:
+
+1. Update the API routes in `src/app/api/` to call the real backend API
+2. Keep the same response structure to minimize changes to the frontend components
+3. Remove or disable the mock system
 
 ## Learn More
 
-To learn more about Next.js, take a look at the following resources:
+To learn more about the technologies used in this project:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js/) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
+- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API
+- [Tailwind CSS](https://tailwindcss.com/docs) - utility-first CSS framework
+- [TypeScript](https://www.typescriptlang.org/docs) - typed JavaScript

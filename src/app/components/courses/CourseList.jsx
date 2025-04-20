@@ -6,142 +6,14 @@ import Pagination from "./Pagination";
 import CourseCard from "./CourseCard";
 import { useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { getAllCourses } from "@/utils/courseSync";
-import { getAllSimpleCourses } from "@/utils/simpleCourseApi";
-import { getAllDirectCourses } from "@/utils/directCourseApi";
-import { getAllFileCourses } from "@/utils/fileCourseApi";
 import CourseCardSkeleton from "./CourseCardSkeleton";
-
-// Mock courses for fallback
-const getMockCourses = () => {
-  return [
-    {
-      id: 'mock-1',
-      title: 'Introduction to Web Development',
-      shortDesription: 'Learn the basics of HTML, CSS, and JavaScript',
-      description: 'This course covers the fundamentals of web development including HTML, CSS, and JavaScript.',
-      category: 'Digital',
-      level: 'Beginner',
-      language: 'English',
-      price: 0,
-      instructor: { name: 'John Doe' },
-      rating: 4.5,
-      reviews: 120,
-      students: 1500,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      status: 'published',
-      icon: '🌐',
-      color: '#4697ce'
-    },
-    {
-      id: 'mock-2',
-      title: 'Advanced JavaScript Programming',
-      shortDesription: 'Master modern JavaScript concepts and frameworks',
-      description: 'Take your JavaScript skills to the next level with advanced concepts and popular frameworks.',
-      category: 'Digital',
-      level: 'Advanced',
-      language: 'English',
-      price: 0,
-      instructor: { name: 'Jane Smith' },
-      rating: 4.8,
-      reviews: 85,
-      students: 950,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      status: 'published',
-      icon: '⚛️',
-      color: '#7EAA7E'
-    },
-    {
-      id: 'mock-3',
-      title: 'Cooking Basics',
-      shortDesription: 'Learn essential cooking techniques and recipes',
-      description: 'Start your culinary journey with fundamental cooking techniques and delicious recipes.',
-      category: 'Cooking',
-      level: 'Beginner',
-      language: 'English',
-      price: 0,
-      instructor: { name: 'Chef Mario' },
-      rating: 4.7,
-      reviews: 210,
-      students: 2200,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      status: 'published',
-      icon: '🍳',
-      color: '#FF6B6B'
-    }
-  ];
-};
+import { courses } from '@/data/mockData';
 
 const fetchCourses = async (search, category, sortBy, page) => {
   try {
-    // First, try to get courses directly from the database API
-    let allCourses = [];
-    try {
-      // Try to fetch from the database API first
-      try {
-        // Make a direct API call to the backend database endpoint
-        const response = await fetch(`/api/courses?page=${page}&pageSize=10${search ? `&search=${search}` : ''}${category && category !== 'All' ? `&subject=${category}` : ''}`);
-        const data = await response.json();
-
-        if (data.success && data.courses && data.courses.length > 0) {
-          console.log('Successfully fetched courses from database API:', data.courses);
-          allCourses = data.courses;
-          return {
-            courses: allCourses,
-            totalPages: data.totalPages || Math.ceil(allCourses.length / 10) || 1
-          };
-        } else {
-          console.log('No courses found in database API, trying other sources');
-        }
-      } catch (dbError) {
-        console.warn('Error fetching from database API:', dbError);
-      }
-
-      // If database API fails, try other methods in parallel as fallback
-      const [directCourses, simpleCourses, fileCourses, localCourses] = await Promise.allSettled([
-        getAllDirectCourses(),
-        getAllSimpleCourses(),
-        getAllFileCourses(),
-        getAllCourses()
-      ]);
-
-      console.log('Courses from direct API:', directCourses.status === 'fulfilled' ? directCourses.value : 'Failed');
-      console.log('Courses from simplified API:', simpleCourses.status === 'fulfilled' ? simpleCourses.value : 'Failed');
-      console.log('Courses from file-based API:', fileCourses.status === 'fulfilled' ? fileCourses.value : 'Failed');
-      console.log('Courses from localStorage:', localCourses.status === 'fulfilled' ? localCourses.value : 'Failed');
-
-      // Use the first successful result that has courses
-      if (directCourses.status === 'fulfilled' && directCourses.value && directCourses.value.length > 0) {
-        allCourses = directCourses.value;
-        console.log('Using courses from direct API');
-      } else if (simpleCourses.status === 'fulfilled' && simpleCourses.value && simpleCourses.value.length > 0) {
-        allCourses = simpleCourses.value;
-        console.log('Using courses from simplified API');
-      } else if (fileCourses.status === 'fulfilled' && fileCourses.value && fileCourses.value.length > 0) {
-        allCourses = fileCourses.value;
-        console.log('Using courses from file-based API');
-      } else if (localCourses.status === 'fulfilled' && localCourses.value && localCourses.value.length > 0) {
-        allCourses = localCourses.value;
-        console.log('Using courses from localStorage');
-      } else {
-        // If all else fails, use mock data
-        console.log('No courses found, using mock data');
-        allCourses = getMockCourses();
-      }
-    } catch (apiError) {
-      console.warn('Error fetching courses, using localStorage:', apiError);
-      // Fall back to localStorage if APIs fail
-      try {
-        allCourses = await getAllCourses();
-        console.log('Using courses from localStorage:', allCourses);
-      } catch (localError) {
-        console.error('Error fetching from localStorage, using mock data:', localError);
-        allCourses = getMockCourses();
-      }
-    }
+    // Get courses directly from mock data
+    console.log('Fetching courses from mock data');
+    const allCourses = courses;
 
     // Filter courses based on search and category
     let filteredCourses = allCourses;
@@ -159,7 +31,7 @@ const fetchCourses = async (search, category, sortBy, page) => {
     // Apply category filter if provided
     if (category && category !== 'All') {
       filteredCourses = filteredCourses.filter(course =>
-        course.category === category
+        course.category === category || (course.tags && course.tags.includes(category))
       );
     }
 

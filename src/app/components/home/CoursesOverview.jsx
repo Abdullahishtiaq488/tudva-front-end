@@ -5,8 +5,8 @@ import { BsThreeDotsVertical } from "react-icons/bs";
 import Image from "next/image";
 import { FaQuestionCircle } from "react-icons/fa";
 import CoursePreview from './course-preview/CoursePreview';
-import course1 from '@/assets/images/courses/4by3/01.jpg';
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { courses, lectureSchedules, timeSlots } from '@/data/mockData';
 
 
 const CoursesOverview = () => {
@@ -17,14 +17,34 @@ const CoursesOverview = () => {
         setOpenItemId(openItemId === id ? null : id); // Toggle open/closed
     };
 
-    const courses = [
-        { id: '1', title: 'JavaScript - Beginners Course', module: 'Module 4/10: Hello World', imageUrl: course1 }, // Replace with your image paths
-        { id: '2', title: 'Photoshop - Advanced', module: 'Module 1/12: Much possibilities in one software', imageUrl: course1 },
-        { id: '3', title: 'Food Knowledge - Better Cooking', module: 'Module 7/15: Physics in the Kitchen', imageUrl: course1 },
-        { id: "4", title: "Flower Gardening", module: "Module 2/2: Finding the perfect flower types", imageUrl: course1 },
-        { id: "5", title: "no course selected", module: "choose the matching topic", imageUrl: course1 },
-        { id: "6", title: "English for Beginner (A1)", module: "Module 4/20: Greetings", imageUrl: course1 },
-    ];
+    // Get courses from our centralized mock data
+    const [myCourses, setMyCourses] = useState([]);
+    const [nextLesson, setNextLesson] = useState(null);
+
+    useEffect(() => {
+        // Get first 6 courses from our centralized mock data
+        const coursesList = courses.slice(0, 6).map(course => {
+            // Get the first module and lecture for this course
+            const firstModule = course.modules && course.modules.length > 0 ? course.modules[0] : null;
+            const moduleTitle = firstModule ? firstModule.title : 'Unknown Module';
+            const lectureCount = course.modules ? course.modules.reduce((total, module) => total + module.lectures.length, 0) : 0;
+
+            return {
+                id: course.id,
+                title: course.title,
+                module: `Module ${firstModule ? course.modules.indexOf(firstModule) + 1 : '?'}/${course.modules?.length || '?'}: ${moduleTitle}`,
+                imageUrl: course.image,
+                totalLectures: lectureCount
+            };
+        });
+
+        setMyCourses(coursesList);
+
+        // Set the first course as the next lesson
+        if (coursesList.length > 0) {
+            setNextLesson(coursesList[0]);
+        }
+    }, []);
 
     return <section className="pt-0 pt-lg-5">
         <Container>
@@ -75,9 +95,10 @@ const CoursesOverview = () => {
                                     <div className="w-100 d-flex justify-content-center">
                                         <div className="w-100 w-md-75">
                                             <CoursePreview
-                                                title="JavaScript - Beginners Course"
-                                                module="Module 3 : Setting Up the Environment"
-                                                imageUrl={course1}
+                                                title={nextLesson?.title || "No course selected"}
+                                                module={nextLesson?.module || "No module available"}
+                                                imageUrl={nextLesson?.imageUrl || "/assets/images/courses/4by3/01.jpg"}
+                                                courseId={nextLesson?.id}
                                             />
                                         </div>
                                     </div>
@@ -111,13 +132,14 @@ const CoursesOverview = () => {
                                     </h5>
                                     <div className="w-100 d-flex justify-content-center">
                                         <Row className='w-100 w-md-75'>
-                                            {courses.map((course, index) => (
+                                            {myCourses.map((course, index) => (
                                                 <Col xs={12} sm={6} md={12} key={course.id} className="mb-3"> {/* Use Col with responsive props */}
                                                     <CoursePreview
                                                         title={course.title}
                                                         module={course.module}
                                                         imageUrl={course.imageUrl}
                                                         number={index + 1}
+                                                        courseId={course.id}
                                                     />
                                                 </Col>
                                             ))}

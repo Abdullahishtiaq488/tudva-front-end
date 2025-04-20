@@ -7,11 +7,10 @@ import SocialMedia from '../profile/components/SocialMedia';
 import EmailChange from '../profile/components/EmailChange';
 import PasswordChange from '../profile/components/PasswordChange';
 import { Row } from 'react-bootstrap';
-import ProtectedRoute from '@/components/ProtectedRoute';
 
 const EditProfilePage = () => {
   return (
-    <ProtectedRoute allowedRoles={['instructor', 'admin']}>
+    <>
       <EditProfile />
       {/* <Row className="g-4 mt-3">
         <LinkedAccount />
@@ -19,7 +18,7 @@ const EditProfilePage = () => {
         <EmailChange />
         <PasswordChange />
       </Row> */}
-    </ProtectedRoute>
+    </>
   );
 };
 

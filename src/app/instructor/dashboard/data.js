@@ -1,6 +1,17 @@
 import { FaGem, FaTv, FaUserGraduate } from "react-icons/fa";
-const root = document.documentElement;
-const style = getComputedStyle(root);
+import { courses, users, enrollments } from '@/data/mockData';
+
+// For chart styling
+let style;
+try {
+  const root = document.documentElement;
+  style = getComputedStyle(root);
+} catch (error) {
+  // Fallback for SSR
+  style = {
+    getPropertyValue: () => '#0d6efd' // Default primary color
+  };
+}
 export const basicChartOpts = {
   series: [{
     name: 'Payout',
@@ -51,21 +62,28 @@ export const basicChartOpts = {
     }
   }
 };
+// Calculate counts from our centralized mock data
+const instructorId = '2'; // Assuming we're looking at instructor with ID 2
+const instructorCourses = courses.filter(course => course.instructor_id === instructorId);
+const totalCourses = instructorCourses.length;
+const totalStudents = users.filter(user => user.role === 'learner').length;
+const totalEnrollments = enrollments.filter(enrollment =>
+  instructorCourses.some(course => course.id === enrollment.course_id)
+).length;
+
 export const counterData = [{
-  count: 25,
+  count: totalCourses,
   title: 'Total Courses',
   icon: FaTv,
   variant: 'warning'
 }, {
-  count: 25,
+  count: totalStudents,
   title: 'Total Students',
   icon: FaUserGraduate,
-  suffix: 'K+',
   variant: 'purple'
 }, {
-  count: 12,
+  count: totalEnrollments,
   title: 'Enrolled Students',
   icon: FaGem,
-  suffix: 'k',
   variant: 'info'
 }];

@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import authService from '@/services/authService';
+import authService from '@/services/mockAuthService';
 
 const AuthContext = createContext();
 
@@ -34,7 +34,7 @@ export const AuthProvider = ({ children }) => {
           } else {
             // If server validation fails, clear auth state
             setUser(null);
-            authService.clearAuth();
+            authService.logout();
           }
         } else {
           // No token, definitely not authenticated

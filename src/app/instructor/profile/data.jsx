@@ -1,5 +1,6 @@
 import { FaFacebook, FaLinkedinIn } from "react-icons/fa";
 import { FcGoogle } from "react-icons/fc";
+import { users } from '@/data/mockData';
 export const linkedAccount = [{
   name: 'Google',
   description: 'You are successfully connected to your Google account',

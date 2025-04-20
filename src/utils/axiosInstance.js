@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 export const axiosInstance = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_BACKEND_BASE_URL || 'http://localhost:3001',
+  baseURL: '',  // Empty baseURL to use relative URLs for local API endpoints
 });
 
 // Function to get cookies by name
@@ -25,23 +25,10 @@ const addTokenToRequest = async (config) => {
     }
 
     // Then try localStorage
-    const localToken = localStorage.getItem('token');
+    const localToken = localStorage.getItem('auth_token');
     if (localToken) {
       config.headers.Authorization = `Bearer ${localToken}`;
       return config;
-    }
-
-    // If not in cookie or localStorage, try to get it from the API
-    try {
-      const response = await fetch('/api/auth/get-token');
-      const data = await response.json();
-      if (data.success && data.token) {
-        // Store token in localStorage for future requests
-        localStorage.setItem('token', data.token);
-        config.headers.Authorization = `Bearer ${data.token}`;
-      }
-    } catch (error) {
-      console.error('Error fetching token:', error);
     }
   }
   return config;

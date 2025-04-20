@@ -6,7 +6,7 @@ import ChoicesFormInput from "@/components/form/ChoicesFormInput";
 import { AllNotesData } from "../data";
 import { Fragment } from "react";
 import Image from "next/image";
-import course1 from '@/assets/images/courses/4by3/01.jpg';
+import { courses } from '@/data/mockData';
 import { BsPencilSquare, BsPlayFill, BsTrash } from "react-icons/bs";
 import Discussion from "./Discussion";
 const AllNotes = () => {
@@ -29,7 +29,7 @@ const AllNotes = () => {
         {AllNotesData.map((note, idx) => <Fragment key={idx}>
             <Row className="g-4" key={idx}>
               <Col sm={2} xl={1}>
-                <Image src={course1} className="rounded flex-shrink-0" alt="course" />
+                <Image src={courses[0]?.image} className="rounded flex-shrink-0" alt="course" width={100} height={100} />
               </Col>
               <Col sm={10} xl={11}>
                 <h5>{note.title}</h5>

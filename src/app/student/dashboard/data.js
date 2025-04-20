@@ -1,20 +1,24 @@
 import { FaClipboardCheck, FaMedal, FaTv } from "react-icons/fa";
+import { courses, enrollments } from '@/data/mockData';
 
-//fas fa-clipboard-check fa-fw
+// Calculate counts from our centralized mock data
+const totalCourses = courses.length;
+const completedLectures = 52; // This could be calculated from enrollments if we had progress data
+const totalEnrollments = enrollments.length;
 
 export const counterData = [{
-  count: 9,
+  count: totalCourses,
   title: 'Total Courses',
   icon: FaTv,
   variant: 'orange'
 }, {
-  count: 52,
-  title: 'Total Courses',
+  count: completedLectures,
+  title: 'Completed Lectures',
   icon: FaClipboardCheck,
   variant: 'purple'
 }, {
-  count: 8,
-  title: 'Enrolled Students',
+  count: totalEnrollments,
+  title: 'Enrolled Courses',
   icon: FaMedal,
   variant: 'success'
 }];

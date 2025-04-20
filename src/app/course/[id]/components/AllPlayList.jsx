@@ -10,7 +10,6 @@ const AllPlayList = ({ course, onVideoSelect, selectedVideo }) => {
 
   // If no modules exist, create a default empty module
   if (Object.keys(modules).length === 0) {
-    console.log('No modules found in AllPlayList, creating default empty module');
     modules['Module 1'] = [];
   }
 
@@ -26,8 +25,6 @@ const AllPlayList = ({ course, onVideoSelect, selectedVideo }) => {
     modules: modules
   };
 
-  console.log('Modified course in AllPlayList:', modifiedCourse);
-
   return (
     <Card className="shadow p-0 mb-4">
       <div className="d-flex justify-content-between align-items-center p-3 bg-primary bg-opacity-10 border-bottom">
@@ -35,12 +32,12 @@ const AllPlayList = ({ course, onVideoSelect, selectedVideo }) => {
           <FaBookOpen className="me-2" />
           Course Content
         </h4>
-        <span className="badge bg-primary">{totalLectures} lectures</span>
+        <span className="badge bg-primary rounded-pill">{totalLectures} lectures</span>
       </div>
-      <CardBody className="p-3">
+      <CardBody className="p-0">
         <Playlist course={modifiedCourse} onVideoSelect={onVideoSelect} selectedVideo={selectedVideo} />
       </CardBody>
-    </Card>
+    </Card >
   );
 };
 

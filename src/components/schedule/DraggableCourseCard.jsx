@@ -1,8 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Badge } from 'react-bootstrap';
-import { FaGraduationCap, FaLock, FaWifi } from 'react-icons/fa';
+import { FaWifi, FaTree, FaCode, FaDatabase, FaChartBar, FaDesktop, FaPalette, FaLaptopCode, FaBookOpen } from 'react-icons/fa';
 
 const DraggableCourseCard = ({ course, onDragStart, index = 0 }) => {
   // Determine if the course is draggable (only recorded courses are draggable)
@@ -24,16 +23,42 @@ const DraggableCourseCard = ({ course, onDragStart, index = 0 }) => {
     }
   };
 
-  // Calculate progress display
-  const progressDisplay = course.progress ||
-    (course.completedLectures && course.totalLectures ?
-      `${course.completedLectures}/${course.totalLectures}` : null);
+  // Calculate progress display - ensure it's in X/Y format
+  let progressDisplay;
+  if (course.progress) {
+    progressDisplay = course.progress;
+  } else if (course.completedLectures && course.totalLectures) {
+    progressDisplay = `${course.completedLectures}/${course.totalLectures}`;
+  } else if (course.lecture && course.lecture.title) {
+    // Extract lecture number from title if available
+    const lectureNumber = parseInt(course.lecture.title.replace('Lecture ', '')) || 1;
+    progressDisplay = `${lectureNumber}/10`; // Default to 10 total lectures if not specified
+  } else {
+    // Default fallback
+    progressDisplay = '3/10';
+  }
 
   // Determine course type for styling
   const courseType = course.courseType || course.format || 'recorded';
 
-  // Get course color with fallback
+  // Get course color with fallback - use light green as default
   const courseColor = course.color || '#8bc34a';
+
+  // Get course icon or use default
+  const getIconComponent = (iconName) => {
+    switch (iconName) {
+      case 'FaTree': return <FaTree />;
+      case 'FaCode': return <FaCode />;
+      case 'FaDatabase': return <FaDatabase />;
+      case 'FaChartBar': return <FaChartBar />;
+      case 'FaDesktop': return <FaDesktop />;
+      case 'FaPalette': return <FaPalette />;
+      case 'FaLaptopCode': return <FaLaptopCode />;
+      default: return <FaTree />;
+    }
+  };
+
+  const courseIcon = course.icon ? getIconComponent(course.icon) : <FaTree />;
 
   return (
     <div
@@ -41,37 +66,41 @@ const DraggableCourseCard = ({ course, onDragStart, index = 0 }) => {
       draggable={isDraggable}
       onDragStart={handleDragStart}
       style={{
-        backgroundColor: courseColor,
         marginTop: `${index * 10}px`,
         marginLeft: `${index * 5}px`,
         zIndex: 10 - index,
       }}
     >
-      <div className="course-title">
-        {course.title}
-      </div>
-
-      {progressDisplay && (
-        <div className="course-progress">
-          {progressDisplay}
+      <div className="card-top-bar" style={{ backgroundColor: courseColor }}>
+        <div className="menu-icon">≡</div>
+        <div className="card-icon">
+          {courseIcon}
         </div>
-      )}
-
-      <div className="course-type">
-        {courseType === 'live' ? (
-          <Badge bg="dark" className="course-badge">
-            <FaWifi className="me-1" size={10} />
-            LIVE
-          </Badge>
-        ) : (
-          <Badge bg="light" text="dark" className="course-badge">
-            <FaGraduationCap className="me-1" size={10} />
-            REC
-          </Badge>
-        )}
       </div>
 
-      {/* Styles moved to external CSS file: /styles/calendar.css */}
+      <div className="card-content">
+        <div className="course-title">
+          {course.title}
+        </div>
+
+        <div className="card-bottom">
+          <div className="course-progress">
+            {progressDisplay}
+          </div>
+
+          {courseType === 'live' ? (
+            <div className="live-badge">
+              <FaWifi className="me-1" />
+              LIVE
+            </div>
+          ) : (
+            <div className="recorded-badge">
+              <FaTree className="me-1" />
+              REC
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 };

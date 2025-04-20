@@ -26,166 +26,100 @@ const LectureScheduleDisplay = ({ courseId, courseType }) => {
     { id: 11, time: '4:30 PM - 5:15 PM' },
   ];
 
+  // Generate dummy schedules for the course
   useEffect(() => {
-    const fetchSchedules = async () => {
+    const generateDummySchedules = () => {
       if (!courseId) {
         setError('Course ID is required');
         setIsLoading(false);
         return;
       }
 
-      try {
-        // First try to get schedules from the API
-        const response = await fetch(`/api/lecture-schedules/${courseId}`);
-        const data = await response.json();
+      // Create a start date (today)
+      const startDate = new Date();
 
-        if (data.success && data.schedules) {
-          console.log('Fetched schedules from API:', data.schedules);
-          setSchedules(data.schedules);
-          setIsLoading(false);
-        } else {
-          // If API fails, try to generate schedules from course data
-          console.log('No schedules from API, trying to generate from course data');
-          
-          // Fetch course data
-          const courseResponse = await fetch(`/api/courses/${courseId}`);
-          const courseData = await courseResponse.json();
-          
-          if (courseData.success && courseData.course) {
-            generateSchedulesFromCourseData(courseData.course);
-          } else {
-            setError('No schedule data available');
+      // Generate 8 schedules, one for each weekday starting from today
+      const dummySchedules = [];
+      let currentScheduleDate = new Date(startDate);
+      let lectureCount = 0;
+
+      // Generate schedules for 4 weeks (8 lectures, 2 per week)
+      for (let week = 0; week < 4; week++) {
+        // Add lectures on Monday and Wednesday
+        for (let day = 0; day < 2; day++) {
+          // Skip weekends
+          while (currentScheduleDate.getDay() === 0 || currentScheduleDate.getDay() === 6) {
+            currentScheduleDate.setDate(currentScheduleDate.getDate() + 1);
           }
-          setIsLoading(false);
+
+          // Create a schedule for this date
+          const moduleName = `Module ${Math.floor(lectureCount / 2) + 1}`;
+          const lectureTitle = `Lecture ${lectureCount + 1}: ${['Introduction', 'Core Concepts', 'Advanced Techniques', 'Practical Applications', 'Case Studies', 'Problem Solving', 'Review', 'Final Project'][lectureCount]}`;
+
+          dummySchedules.push({
+            id: `schedule-${lectureCount + 1}`,
+            course_id: courseId,
+            scheduledDate: new Date(currentScheduleDate),
+            slot_id: (lectureCount % 5) + 1, // Use different time slots
+            lecture: {
+              id: `lecture-${lectureCount + 1}`,
+              title: lectureTitle,
+              moduleName: moduleName,
+              isDemoLecture: lectureCount === 0, // First lecture is a demo
+            }
+          });
+
+          // Move to the next lecture
+          lectureCount++;
+
+          // Move to the next day (skip to Wednesday if currently Monday, or to next Monday if currently Wednesday)
+          currentScheduleDate.setDate(currentScheduleDate.getDate() + (day === 0 ? 2 : 5));
         }
-      } catch (error) {
-        console.error('Error fetching lecture schedules:', error);
-        setError('Failed to load schedule data');
-        setIsLoading(false);
       }
+
+      setSchedules(dummySchedules);
+      setIsLoading(false);
     };
 
-    fetchSchedules();
-  }, [courseId]);
+    // Generate dummy schedules after a short delay to simulate API call
+    const timer = setTimeout(() => {
+      generateDummySchedules();
+    }, 1000);
 
-  // Generate schedules from course data
-  const generateSchedulesFromCourseData = (courseData) => {
-    const generatedSchedules = [];
+    return () => clearTimeout(timer);
+  }, [courseId, courseType]);
 
-    // Get scheduling data
-    const scheduling = courseData.scheduling;
-    if (!scheduling) {
-      console.warn('No scheduling data found in course data');
-      return setSchedules([]);
-    }
 
-    const { day, startDate: scheduleStartDate, selectedSlots, totalWeeks } = scheduling;
-    if (!scheduleStartDate || !selectedSlots || !selectedSlots.length) {
-      console.warn('Incomplete scheduling data:', scheduling);
-      return setSchedules([]);
-    }
 
-    console.log('Generating schedules with data:', { day, scheduleStartDate, selectedSlots, totalWeeks });
-
-    // First check if we have modulesList (new format)
-    let allLectures = [];
-    let moduleMap = {};
-
-    // Get lectures from modules
-    if (courseData.modules) {
-      Object.entries(courseData.modules).forEach(([moduleName, lectures], moduleIndex) => {
-        if (Array.isArray(lectures)) {
-          lectures.forEach((lecture, lectureIndex) => {
-            allLectures.push({
-              ...lecture,
-              moduleName,
-              moduleIndex,
-              lectureIndex
-            });
-          });
-        }
-      });
-    } else if (courseData.lectures && Array.isArray(courseData.lectures)) {
-      // If we have a flat lectures array
-      allLectures = courseData.lectures.map((lecture, index) => ({
-        ...lecture,
-        moduleName: lecture.moduleName || `Module ${Math.floor(index / 4) + 1}`,
-        moduleIndex: Math.floor(index / 4),
-        lectureIndex: index % 4
-      }));
-    }
-
-    // Sort lectures by module and lecture index
-    allLectures.sort((a, b) => {
-      if (a.moduleIndex !== b.moduleIndex) {
-        return a.moduleIndex - b.moduleIndex;
-      }
-      return a.lectureIndex - b.lectureIndex;
-    });
-
-    // If we don't have enough lectures, create placeholders
-    const totalLectures = totalWeeks * selectedSlots.length;
-    while (allLectures.length < totalLectures) {
-      const moduleIndex = Math.floor(allLectures.length / 4);
-      const lectureIndex = allLectures.length % 4;
-      allLectures.push({
-        title: `Lecture ${allLectures.length + 1}`,
-        moduleName: `Module ${moduleIndex + 1}`,
-        moduleIndex,
-        lectureIndex,
-        placeholder: true
-      });
-    }
-
-    // Create schedule entries
-    const startDate = new Date(scheduleStartDate);
-    let currentLectureIndex = 0;
-
-    // For each week
-    for (let week = 0; week < totalWeeks; week++) {
-      // Calculate the date for this week
-      const weekDate = new Date(startDate);
-      weekDate.setDate(startDate.getDate() + (week * 7));
-      
-      // For each selected slot
-      selectedSlots.forEach((slotId) => {
-        if (currentLectureIndex < allLectures.length) {
-          const lecture = allLectures[currentLectureIndex];
-          
-          generatedSchedules.push({
-            id: `generated-${week}-${slotId}`,
-            scheduledDate: weekDate.toISOString(),
-            slot_id: slotId,
-            lecture: lecture,
-            course_id: courseId
-          });
-          
-          currentLectureIndex++;
-        }
-      });
-    }
-
-    console.log('Generated schedules:', generatedSchedules);
-    setSchedules(generatedSchedules);
-  };
-
-  // Check if a lecture is accessible (past date for live courses, or always for recorded)
+  // Check if a lecture is accessible based on its scheduled date
   const isLectureAccessible = (schedule) => {
-    if (courseType !== 'live') {
-      return true; // Recorded courses are always accessible
-    }
-    
+    if (!schedule || !schedule.scheduledDate) return false;
+
     const scheduleDate = new Date(schedule.scheduledDate);
-    return scheduleDate <= currentDate;
+
+    // For recorded courses, lectures are accessible after their scheduled date
+    if (courseType !== 'live') {
+      return currentDate >= scheduleDate;
+    }
+
+    // For live courses, lectures are only accessible on the day they are scheduled
+    const isToday =
+      scheduleDate.getDate() === currentDate.getDate() &&
+      scheduleDate.getMonth() === currentDate.getMonth() &&
+      scheduleDate.getFullYear() === currentDate.getFullYear();
+
+    return isToday;
   };
 
-  // Handle lecture selection
+  // Handle lecture click
   const handleLectureClick = (schedule) => {
     if (isLectureAccessible(schedule)) {
-      // Navigate to lecture or play video
+      // If the lecture is accessible, navigate to the lecture or play the video
       toast.success(`Opening lecture: ${schedule.lecture?.title || 'Untitled Lecture'}`);
+      // Implement navigation or video playback here
     } else {
-      toast.error('This lecture is not yet available');
+      // If the lecture is not accessible, show a message
+      toast.error('This lecture is not yet available. Please check back on the scheduled date.');
     }
   };
 

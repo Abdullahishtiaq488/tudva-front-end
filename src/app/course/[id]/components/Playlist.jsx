@@ -18,7 +18,6 @@ const Playlist = ({ course, onVideoSelect, selectedVideo: propSelectedVideo }) =
 
   // Handle video selection
   const handleVideoClick = (video) => {
-    console.log('Video clicked in Playlist:', video);
     // Only handle videos that have a videoUrl
     if (video && video.videoUrl) {
       setSelectedVideo(video);
@@ -30,7 +29,6 @@ const Playlist = ({ course, onVideoSelect, selectedVideo: propSelectedVideo }) =
         }
       }
     } else {
-      console.warn('Video has no videoUrl:', video);
       alert('This video does not have a playable URL.');
     }
   };
@@ -40,30 +38,37 @@ const Playlist = ({ course, onVideoSelect, selectedVideo: propSelectedVideo }) =
     return <div>Loading course content...</div>;
   }
 
+  // Log course data for debugging
   console.log('Course data in Playlist:', course);
 
-  // Ensure modules exist
-  const modules = course.modules || {};
+  // Ensure modules exist and are in the correct format
+  const modules = course.modules || [];
 
-  // If no modules exist, create a default empty module
-  if (Object.keys(modules).length === 0) {
-    console.log('No modules found, creating default empty module');
-    modules['Module 1'] = [];
+  // Convert modules array to the format expected by the component
+  const validModules = {};
+
+  if (Array.isArray(modules)) {
+    // If modules is an array (our centralized mock data format)
+    modules.forEach(module => {
+      validModules[module.title] = module.lectures || [];
+    });
+  } else if (typeof modules === 'object') {
+    // If modules is already an object (old format)
+    Object.entries(modules).forEach(([moduleName, videos]) => {
+      // Check if videos is an array
+      if (Array.isArray(videos)) {
+        validModules[moduleName] = videos;
+      } else {
+        // If not an array, create an empty array
+        validModules[moduleName] = [];
+      }
+    });
   }
 
-  // Ensure all modules have valid video arrays
-  const validModules = {};
-  Object.entries(modules).forEach(([moduleName, videos]) => {
-    // Check if videos is an array
-    if (Array.isArray(videos)) {
-      validModules[moduleName] = videos;
-    } else {
-      // If not an array, create an empty array
-      validModules[moduleName] = [];
-    }
-  });
-
-  console.log('Valid modules in Playlist:', validModules);
+  // If no modules exist, create a default empty module
+  if (Object.keys(validModules).length === 0) {
+    validModules['Module 1'] = [];
+  }
 
   // Check if we have any modules with videos
   const hasContent = Object.values(validModules).some(videos => videos.length > 0);
@@ -83,10 +88,10 @@ const Playlist = ({ course, onVideoSelect, selectedVideo: propSelectedVideo }) =
       {Object.entries(validModules).map(([moduleName, videos], moduleIdx) => (
         <AccordionItem
           eventKey={`${moduleIdx}`}
-          className={clsx(Object.keys(validModules).length - 1 !== moduleIdx ? "mb-3" : "mb-0")}
+          className={clsx(Object.keys(validModules).length - 1 !== moduleIdx ? "mb-3" : "mb-0", "border rounded-3 overflow-hidden")}
           key={moduleIdx}
         >
-          <AccordionHeader as='h6' className="font-base bg-light rounded-3" id={`heading-${moduleIdx}`}>
+          <AccordionHeader as='h6' className="font-base bg-light" id={`heading-${moduleIdx}`}>
             <div className="fw-bold d-flex justify-content-between align-items-center w-100">
               <div>
                 <span className="mb-0 text-primary">{moduleName}</span>
@@ -143,39 +148,51 @@ const Playlist = ({ course, onVideoSelect, selectedVideo: propSelectedVideo }) =
                     return (
                       <Fragment key={video.id || idx}>
                         {video.id === selectedVideo?.id ? (
-                          <div className="p-2 bg-success bg-opacity-10 rounded-3 border border-success">
+                          <div className="p-3 bg-success bg-opacity-10 rounded-3 border border-success mb-2">
                             <div className="d-flex justify-content-between align-items-center">
                               <div className="position-relative d-flex align-items-center">
                                 <Button
                                   variant="success"
                                   size="sm"
-                                  className="btn btn-round btn-sm mb-0 stretched-link position-static"
+                                  className="btn btn-round btn-sm mb-0 flex-shrink-0"
                                 >
                                   <FaPlay className="me-0" size={11} />
                                 </Button>
-                                <span className="d-inline-block text-truncate ms-2 mb-0 h6 fw-bold text-success w-200px">
+                                <span className="d-inline-block text-truncate ms-2 mb-0 h6 fw-bold text-success">
                                   {video.title}
                                 </span>
                               </div>
-                              <p className="mb-0 text-truncate badge bg-success text-white">Playing</p>
+                              <p className="mb-0 text-truncate badge bg-success text-white flex-shrink-0 ms-2">Playing</p>
                             </div>
+                            {video.description && (
+                              <p className="small text-muted mt-2 mb-0 line-clamp-2">{video.description}</p>
+                            )}
                           </div>
                         ) : (
-                          <div className="d-flex justify-content-between align-items-center p-2 rounded-3 hover-bg-light">
-                            <div className="position-relative d-flex align-items-center">
+                          <div
+                            className="d-flex justify-content-between align-items-center p-3 rounded-3 mb-2 cursor-pointer"
+                            style={{ backgroundColor: '#f8f9fa', transition: 'all 0.2s ease' }}
+                            onClick={() => handleVideoClick(video)}
+                            onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f0f0f0'}
+                            onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#f8f9fa'}
+                          >
+                            <div className="d-flex align-items-center flex-grow-1 overflow-hidden">
                               <Button
                                 variant="primary"
                                 size="sm"
-                                className="btn btn-round btn-sm mb-0 stretched-link"
-                                onClick={() => handleVideoClick(video)}
+                                className="btn btn-round btn-sm mb-0 flex-shrink-0"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleVideoClick(video);
+                                }}
                               >
                                 <FaPlay className="me-0" size={11} />
                               </Button>
-                              <span className="d-inline-block text-truncate ms-2 mb-0 h6 fw-light w-200px">
+                              <span className="d-inline-block text-truncate ms-2 mb-0 h6 fw-light">
                                 {video.title}
                               </span>
                             </div>
-                            <p className="mb-0 text-truncate badge bg-light text-dark">
+                            <p className="mb-0 text-truncate badge bg-light text-dark flex-shrink-0 ms-2">
                               {video.duration || "10:00"}
                             </p>
                           </div>
@@ -186,25 +203,28 @@ const Playlist = ({ course, onVideoSelect, selectedVideo: propSelectedVideo }) =
                     // Locked lecture
                     return (
                       <Fragment key={video.id || idx}>
-                        <div className="p-2 bg-light rounded-3 border border-light">
+                        <div className="p-3 bg-light rounded-3 border border-light mb-2">
                           <div className="d-flex justify-content-between align-items-center">
-                            <div className="position-relative d-flex align-items-center">
+                            <div className="position-relative d-flex align-items-center flex-grow-1 overflow-hidden">
                               <Button
                                 variant="secondary"
                                 size="sm"
-                                className="btn btn-round mb-0 position-static"
+                                className="btn btn-round mb-0 flex-shrink-0"
                                 disabled={true}
                               >
                                 <FaLock className="me-0" size={11} />
                               </Button>
-                              <span className="d-inline-block text-truncate ms-2 mb-0 h6 fw-light w-200px text-muted">
+                              <span className="d-inline-block text-truncate ms-2 mb-0 h6 fw-light text-muted">
                                 {video.title}
                               </span>
                             </div>
-                            <p className="mb-0 text-truncate badge bg-secondary text-white">
+                            <p className="mb-0 text-truncate badge bg-secondary text-white flex-shrink-0 ms-2">
                               Locked
                             </p>
                           </div>
+                          {video.description && (
+                            <p className="small text-muted mt-2 mb-0 line-clamp-2">{video.description}</p>
+                          )}
                         </div>
                       </Fragment>
                     );

@@ -272,18 +272,11 @@ const WeeklyCalendar = ({ initialEnrolledCourses = [] }) => {
       return false;
     }
 
-    // Check if there's already a live course in this slot (can't stack with live courses)
+    // Check if there's already any course in this slot (no stacking allowed)
     const coursesInSlot = coursesByDayAndTime[day.date]?.[timeSlot.id] || [];
-    const hasLiveCourse = coursesInSlot.some(c =>
-      (c.courseType === 'live' || c.format === 'live') && c.id !== draggedSchedule.id
-    );
 
-    if (hasLiveCourse) {
-      return false;
-    }
-
-    // Allow stacking up to 3 recorded courses
-    if (coursesInSlot.length >= 3 && !coursesInSlot.some(c => c.id === draggedSchedule.id)) {
+    // If there's already a course in this slot and it's not the one being dragged, it's invalid
+    if (coursesInSlot.length > 0 && !coursesInSlot.some(c => c.id === draggedSchedule.id)) {
       return false;
     }
 

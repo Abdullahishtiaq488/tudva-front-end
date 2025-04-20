@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { Button, Card, CardBody, Col, Container, Dropdown, DropdownItem, DropdownMenu, DropdownToggle, Row } from "react-bootstrap";
+import { Badge, Button, Card, CardBody, Col, Container, Dropdown, DropdownItem, DropdownMenu, DropdownToggle, Row } from "react-bootstrap";
 import { FaBookOpen, FaClock, FaCopy, FaFacebookSquare, FaGlobe, FaGraduationCap, FaLinkedin, FaMedal, FaPlay, FaShareAlt, FaSignal, FaStar, FaStopwatch, FaTwitterSquare, FaUserClock, FaUserGraduate } from "react-icons/fa";
 import { useState } from "react";
 import GlightBox from "@/components/GlightBox";
@@ -9,13 +9,17 @@ import { currency } from "@/context/constants";
 import CourseTab from "./CourseTab";
 import AllPlayList from "./AllPlayList";
 
+
 const CourseDetails = ({ course, onVideoSelect, selectedVideo }) => {
-  console.log('Course data in CourseDetails:', course);
+  // Initialize component with course data
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const toggleDropdown = () => setIsDropdownOpen(!isDropdownOpen);
 
+  // Log course data for debugging
+  console.log('Course data in CourseDetails:', course);
+
   const handleVideoSelect = (video) => {
-    console.log('Video selected in CourseDetails:', video);
+    // Handle video selection
     if (onVideoSelect && video && video.videoUrl) {
       onVideoSelect(video);
     }
@@ -26,8 +30,7 @@ const CourseDetails = ({ course, onVideoSelect, selectedVideo }) => {
     return (
       <Card className="shadow p-0 mb-4 z-index-9">
         <div className="d-flex justify-content-between align-items-center p-3 bg-primary bg-opacity-10 border-bottom">
-          <h4 className="mb-0 text-primary">Course Price</h4>
-          <h3 className="mb-0 fw-bold">{currency}{course?.course?.price || 0}</h3>
+          <h4 className="mb-0 text-primary">Course Details</h4>
         </div>
         <CardBody className="px-3 pt-3">
 
@@ -37,35 +40,35 @@ const CourseDetails = ({ course, onVideoSelect, selectedVideo }) => {
                 <FaUserClock className="text-primary me-2" />
                 Duration
               </span>
-              <span>{course?.course?.estimatedDuration || '10 hours'}</span>
+              <span>{course?.duration || course?.estimatedDuration || '10 hours'}</span>
             </li>
             <li className="list-group-item d-flex justify-content-between align-items-center">
               <span className="h6 fw-light mb-0">
                 <FaSignal className="text-primary me-2" />
                 Level
               </span>
-              <span>{course?.course?.level || 'Beginner'}</span>
+              <span>{course?.level || 'Beginner'}</span>
             </li>
             <li className="list-group-item d-flex justify-content-between align-items-center">
               <span className="h6 fw-light mb-0">
                 <FaUserGraduate className="text-primary me-2" />
                 Instructor
               </span>
-              <span>{course?.course?.instructor?.fullName || 'Instructor'}</span>
+              <span>{course?.instructor?.fullName || course?.instructor?.name || 'Instructor'}</span>
             </li>
             <li className="list-group-item d-flex justify-content-between align-items-center">
               <span className="h6 fw-light mb-0">
                 <FaGlobe className="text-primary me-2" />
                 Language
               </span>
-              <span>{course?.course?.language || 'English'}</span>
+              <span>{course?.language || 'English'}</span>
             </li>
             <li className="list-group-item d-flex justify-content-between align-items-center">
               <span className="h6 fw-light mb-0">
                 <FaBookOpen className="text-primary me-2" />
                 Lectures
               </span>
-              <span>{course?.lectures?.length || 0} lectures</span>
+              <span>{course?.totalLectures || course?.lectures || (course?.modules ? course.modules.reduce((total, module) => total + module.lectures.length, 0) : 0)} lectures</span>
             </li>
           </ul>
         </CardBody>
@@ -93,7 +96,7 @@ const CourseDetails = ({ course, onVideoSelect, selectedVideo }) => {
                       'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                      course_id: course?.course?.id,
+                      course_id: course?.id,
                     }),
                   })
                     .then(response => response.json())
@@ -105,7 +108,7 @@ const CourseDetails = ({ course, onVideoSelect, selectedVideo }) => {
                       }
                     })
                     .catch(error => {
-                      console.error('Error enrolling in course:', error);
+                      // Handle enrollment error
                       alert('Failed to enroll in course. Please try again.');
                     });
                 }
@@ -120,47 +123,64 @@ const CourseDetails = ({ course, onVideoSelect, selectedVideo }) => {
     );
   };
 
+  // Custom CSS to prevent horizontal scrollbar
+  const customStyles = `
+    .tag-container {
+      overflow-x: hidden;
+      max-width: 100%;
+      word-break: break-word;
+    }
+    .tag-badge {
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  `;
+
   return (
-    <section className="pb-0 py-lg-5">
-      <Container>
-        <Row className="g-4">
-          <Col lg={8}>
-            <CourseTab course={course} />
-          </Col>
-          <Col lg={4}>
-            <div className="position-sticky" style={{ top: '100px' }}>
-              <Row className="g-4">
-                <Col xs={12}>
-                  <PricingCard />
-                </Col>
-                <Col xs={12}>
-                  <Card className="shadow p-0 mb-4">
-                    <div className="d-flex align-items-center p-3 bg-primary bg-opacity-10 border-bottom">
-                      <h4 className="mb-0 text-primary">Tags</h4>
-                    </div>
-                    <CardBody className="p-3">
-                      <ul className="list-inline mb-0">
-                        {course?.tags?.map((tag, id) => (
-                          <li className="list-inline-item" key={id}>
-                            <Button variant="outline-primary" size="sm" className="mb-2">{tag.tag_name}</Button>
-                          </li>
-                        ))}
-                        {(!course?.tags || course?.tags?.length === 0) && (
-                          <p className="text-muted mb-0">No tags available for this course</p>
-                        )}
-                      </ul>
-                    </CardBody>
-                  </Card>
-                </Col>
-                <Col xs={12}>
-                  <AllPlayList course={course} onVideoSelect={handleVideoSelect} selectedVideo={selectedVideo} />
-                </Col>
-              </Row>
-            </div>
-          </Col>
-        </Row>
-      </Container>
-    </section>
+    <>
+      <style jsx>{customStyles}</style>
+      <section className="pb-0 py-lg-5">
+        <Container>
+          <Row className="g-4">
+            {/* Main content */}
+            <Col lg={8}>
+              {/* Course tabs */}
+              <CourseTab course={course} />
+            </Col>
+
+            {/* Sidebar - Sticky */}
+            <Col lg={4}>
+              <div className="sticky-sidebar">
+                <div>
+                  {/* Pricing Card */}
+                  <PricingCard course={course} />
+
+                  {/* Tags */}
+                  {course?.tags && course.tags.length > 0 && (
+                    <Card className="shadow p-0 mb-4 mt-4">
+                      <div className="d-flex align-items-center p-3 bg-primary bg-opacity-10 border-bottom">
+                        <h4 className="mb-0 text-primary">Tags</h4>
+                      </div>
+                      <CardBody className="p-3">
+                        <div className="d-flex flex-wrap gap-2 tag-container">
+                          {course.tags.map((tag, idx) => (
+                            <Badge key={idx} bg="light" text="dark" className="px-3 py-2 tag-badge">
+                              {typeof tag === 'string' ? tag : tag.tag_name || tag}
+                            </Badge>
+                          ))}
+                        </div>
+                      </CardBody>
+                    </Card>
+                  )}
+                </div>
+              </div>
+            </Col>
+          </Row>
+        </Container>
+      </section>
+    </>
   );
 };
 

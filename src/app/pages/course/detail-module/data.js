@@ -1,7 +1,10 @@
 import { FaFileAlt, FaFileSignature, FaQuestionCircle } from "react-icons/fa";
-import avatar3 from '@/assets/images/avatar/03.jpg';
-import avatar5 from '@/assets/images/avatar/05.jpg';
+import { users, courses } from '@/data/mockData';
 import { addOrSubtractMinutesFromDate } from "@/utils/date";
+
+// Get avatars from our centralized mock data
+const avatar3 = users[2]?.profilePicture;
+const avatar5 = users[4]?.profilePicture;
 export const courseMaterialData = [{
   date: "April 15 - 20",
   lectures: [{

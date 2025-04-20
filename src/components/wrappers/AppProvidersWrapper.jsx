@@ -15,6 +15,8 @@ const AppProvidersWrapper = ({
   useEffect(() => {
     Aos.init();
 
+    // Mock data is now directly imported where needed
+
     // Force remove splash screen after a short delay
     const timer = setTimeout(() => {
       const splashScreen = document.querySelector('#splash-screen');

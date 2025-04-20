@@ -5,9 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { checkIsLoggedInUser } from "@/helpers/checkLoggedInUser";
 import axiosInstance from "@/utils/axiosInstance";
-import { getAllFileCourses } from "@/utils/fileCourseApi";
-import { getAllDirectCourses } from "@/utils/directCourseApi";
-import { getAllSimpleCourses } from "@/utils/simpleCourseApi";
+// Mock data imports removed
 import TopNavigationBar from "./components/TopNavigationBar";
 
 // Dynamically import components that use window/browser APIs with ssr: false
@@ -295,58 +293,7 @@ const DetailMinimal = () => {
           console.warn('Error fetching from backend API:', backendError);
         }
 
-        // If not found in backend API, try file-based API
-        if (!course) {
-          try {
-            console.log('Trying to fetch course from file-based API');
-            const fileResponse = await axiosInstance.get(`/api/file-courses/${courseId}`);
-
-            if (fileResponse.data && fileResponse.data.course) {
-              console.log('Successfully fetched course from file-based API:', fileResponse.data.course);
-              course = fileResponse.data.course;
-            }
-          } catch (fileApiError) {
-            console.warn('Error fetching from file-based API:', fileApiError);
-          }
-        }
-
-        // If still not found, try direct API
-        if (!course) {
-          try {
-            console.log('Trying to fetch course from direct API');
-            const directResponse = await axiosInstance.get(`/api/direct-courses/${courseId}`);
-
-            if (directResponse.data && directResponse.data.course) {
-              console.log('Successfully fetched course from direct API:', directResponse.data.course);
-              course = directResponse.data.course;
-            }
-          } catch (directApiError) {
-            console.warn('Error fetching from direct API:', directApiError);
-          }
-        }
-
-        // If still not found, try getting all courses from different APIs
-        if (!course) {
-          try {
-            // Try all file courses
-            const fileCourses = await getAllFileCourses();
-            course = fileCourses.find(c => c.id === courseId);
-
-            if (!course) {
-              // Try all direct courses
-              const directCourses = await getAllDirectCourses();
-              course = directCourses.find(c => c.id === courseId);
-
-              if (!course) {
-                // Try all simple courses
-                const simpleCourses = await getAllSimpleCourses();
-                course = simpleCourses.find(c => c.id === courseId);
-              }
-            }
-          } catch (allCoursesError) {
-            console.warn('Error fetching all courses:', allCoursesError);
-          }
-        }
+        // Alternative APIs removed
 
         // If still not found, try localStorage as last resort
         if (!course) {
@@ -358,23 +305,7 @@ const DetailMinimal = () => {
               course = courses.find(c => c.id === courseId);
             }
 
-            // If not found, try fileCourses in localStorage
-            if (!course) {
-              const fileCoursesStr = localStorage.getItem('fileCourses');
-              if (fileCoursesStr) {
-                const fileCourses = JSON.parse(fileCoursesStr);
-                course = fileCourses.find(c => c.id === courseId);
-              }
-            }
-
-            // If still not found, try directCourses in localStorage
-            if (!course) {
-              const directCoursesStr = localStorage.getItem('directCourses');
-              if (directCoursesStr) {
-                const directCourses = JSON.parse(directCoursesStr);
-                course = directCourses.find(c => c.id === courseId);
-              }
-            }
+            // Alternative localStorage items removed
 
             // If still not found, try specific course in localStorage
             if (!course) {
@@ -452,9 +383,9 @@ const DetailMinimal = () => {
   if (isLoading) {
     return (
       <>
-        
+
         <CourseDetailSkeleton />
-    
+
       </>
     );
   }

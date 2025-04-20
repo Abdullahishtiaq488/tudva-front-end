@@ -5,6 +5,7 @@ import { Row, Col, Card, Button, Spinner, Alert } from 'react-bootstrap';
 import { FaCalendarAlt, FaExclamationTriangle } from 'react-icons/fa';
 import WeeklyCalendar from '../dashboard/components/WeeklyCalendar';
 import UpcomingLectures from '../dashboard/components/UpcomingLectures';
+import { courses, enrollments } from '@/data/mockData';
 
 
 const SchedulePage = () => {
@@ -12,89 +13,38 @@ const SchedulePage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Fetch enrolled courses
+  // Use our centralized mock data for enrolled courses
   useEffect(() => {
-    const fetchEnrolledCourses = async () => {
-      setIsLoading(true);
-      setError(null);
+    setIsLoading(true);
+    setError(null);
 
-      try {
-        // Try file-based API first
-        const response = await fetch('/api/file-enrollments/user');
+    try {
+      // Get enrolled courses from our centralized mock data
+      console.log('Using centralized mock data for enrolled courses');
 
-        if (!response.ok) {
-          // If file-based API fails, try the database API
-          const dbResponse = await fetch('/api/enrollments/user');
+      // Get enrolled course IDs from enrollments
+      const enrolledCourseIds = enrollments.map(enrollment => enrollment.course_id);
 
-          if (!dbResponse.ok) {
-            throw new Error('Failed to fetch enrolled courses');
-          }
+      // Get course details for enrolled courses
+      const enrolledCoursesList = courses.filter(course => enrolledCourseIds.includes(course.id));
 
-          const data = await dbResponse.json();
-          if (data.success && data.enrollments) {
-            setEnrolledCourses(data.enrollments.map(enrollment => enrollment.course));
-          } else {
-            throw new Error(data.message || 'No enrolled courses found');
-          }
-        } else {
-          const data = await response.json();
-          if (data.success && data.enrollments) {
-            setEnrolledCourses(data.enrollments.map(enrollment => enrollment.course));
-          } else {
-            throw new Error(data.message || 'No enrolled courses found');
-          }
-        }
-      } catch (err) {
-        console.error('Error fetching enrolled courses:', err);
-        setError(err.message || 'Failed to load your enrolled courses');
-
-        // Generate mock courses for demo purposes
-        generateMockCourses();
-      } finally {
-        setIsLoading(false);
+      // If no enrolled courses, use all courses
+      if (enrolledCoursesList.length === 0) {
+        console.log('No enrolled courses found, using all courses');
+        setEnrolledCourses(courses);
+      } else {
+        setEnrolledCourses(enrolledCoursesList);
       }
-    };
+    } catch (err) {
+      console.error('Error getting enrolled courses from mock data:', err);
+      setError('Failed to load your enrolled courses');
 
-    fetchEnrolledCourses();
+      // Fallback to using all courses
+      setEnrolledCourses(courses);
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
-
-  // Generate mock courses for demo purposes
-  const generateMockCourses = () => {
-    const mockCourses = [
-      {
-        id: 'mock-1',
-        title: 'Introduction to Web Development',
-        format: 'recorded',
-        image: '/images/courses/course-1.jpg'
-      },
-      {
-        id: 'mock-2',
-        title: 'Advanced JavaScript Concepts',
-        format: 'live',
-        image: '/images/courses/course-2.jpg'
-      },
-      {
-        id: 'mock-3',
-        title: 'React.js Fundamentals',
-        format: 'recorded',
-        image: '/images/courses/course-3.jpg'
-      },
-      {
-        id: 'mock-4',
-        title: 'Node.js Backend Development',
-        format: 'live',
-        image: '/images/courses/course-4.jpg'
-      },
-      {
-        id: 'mock-5',
-        title: 'Database Design and SQL',
-        format: 'recorded',
-        image: '/images/courses/course-5.jpg'
-      }
-    ];
-
-    setEnrolledCourses(mockCourses);
-  };
 
   if (isLoading) {
     return (
@@ -140,13 +90,29 @@ const SchedulePage = () => {
       </Row>
 
       <Row className="g-4">
-        <Col lg={8}>
+        <Col xs={12} className="mb-4">
+          <div className="upcoming-lectures-container">
+            <UpcomingLectures enrolledCourses={enrolledCourses} />
+          </div>
+        </Col>
+        <Col xs={12}>
           <WeeklyCalendar enrolledCourses={enrolledCourses} />
         </Col>
-        <Col lg={4}>
-          <UpcomingLectures enrolledCourses={enrolledCourses} />
-        </Col>
       </Row>
+
+      {/* CSS for horizontal scrolling without visible scrollbar */}
+      <style jsx global>{`
+        .upcoming-lectures-container {
+          width: 100%;
+          overflow-x: auto;
+          scrollbar-width: none; /* Firefox */
+          -ms-overflow-style: none; /* IE and Edge */
+        }
+
+        .upcoming-lectures-container::-webkit-scrollbar {
+          display: none; /* Chrome, Safari, Opera */
+        }
+      `}</style>
     </>
   );
 };

@@ -162,22 +162,10 @@ export const faqs = [{
   question: "What certificates will I be received for this program?",
   answer: "Smile spoke total few great had never their too Amongst moments do in arrived at my replied Fat weddings servants but man believed prospect Companions understood is as especially pianoforte connection introduced Nay newspaper can sportsman are admitting gentleman belonging his Is oppose no he summer lovers twenty in Not his difficulty boisterous surrounded bed Seems folly if in given scale Sex contented dependent conveying advantage."
 }];
-export const courseData = {
-  id: "1",
-  title: "Digital Marketing Ultimate Course Bundle",
-  description: "<p>Welcome to the Digital Marketing Ultimate Course Bundle. This comprehensive course covers all aspects of digital marketing, from SEO to social media marketing.</p><p>You'll learn practical skills that you can apply immediately to your business or career.</p>",
-  short_description: "Learn digital marketing from scratch",
-  category: "Marketing",
-  level: "Beginner",
-  language: "English",
-  format: "recorded",
-  instructor_id: "1",
-  instructor: {
-    id: "1",
-    fullName: "John Doe",
-    profilePicture: "/assets/images/avatar/01.jpg"
-  }
-};
+import { courses } from '@/data/mockData';
+
+// Use the first course from our centralized mock data
+export const courseData = courses[0];
 
 export const commentData = [{
   name: "Frances Guerrero",

@@ -7,10 +7,7 @@ import { FaAngleRight, FaCheckCircle, FaRegEdit, FaSearch, FaTable, FaTimes } fr
 import { FaAngleLeft } from 'react-icons/fa6';
 import { Button, Card, CardBody, CardHeader, Col, Row } from 'react-bootstrap';
 import Link from 'next/link';
-import { syncCourses } from '@/utils/courseSync';
-import { getAllSimpleCourses } from '@/utils/simpleCourseApi';
-import { getAllDirectCourses } from '@/utils/directCourseApi';
-import { getAllFileCourses } from '@/utils/fileCourseApi';
+// Mock data imports removed
 import { useAuth } from '@/context/AuthContext';
 const ManageCoursePage = () => {
   const [courses, setCourses] = useState([]);
@@ -32,21 +29,23 @@ const ManageCoursePage = () => {
         const currentUserId = user?.id;
         console.log('Current user ID:', currentUserId);
 
-        // First try to get courses from the file-based API
+        // Try to get courses from the API
         try {
-          const fileCourses = await getAllFileCourses();
-          console.log('Courses from file-based API:', fileCourses);
+          const response = await fetch('/api/courses');
+          const data = await response.json();
 
-          if (fileCourses && fileCourses.length > 0) {
+          if (data.success && data.courses && data.courses.length > 0) {
+            console.log('Courses from API:', data.courses);
+
             // Filter courses by instructor ID if user is available
             const instructorCourses = currentUserId
-              ? fileCourses.filter(course => {
+              ? data.courses.filter(course => {
                 // Check different possible instructor ID fields
                 return course.instructor_id === currentUserId ||
                   course.instructorId === currentUserId ||
                   (course.instructor && course.instructor.id === currentUserId);
               })
-              : fileCourses;
+              : data.courses;
 
             console.log('Filtered instructor courses:', instructorCourses);
 
@@ -63,144 +62,71 @@ const ManageCoursePage = () => {
 
             setIsLoading(false);
             return;
-          } else {
-            console.log('No courses from file-based API, trying direct API');
           }
-        } catch (fileApiError) {
-          console.warn('Error fetching from file-based API:', fileApiError);
+        } catch (apiError) {
+          console.warn('Error fetching from API:', apiError);
         }
 
-        // Try direct API if file-based API fails or returns no courses
-        try {
-          const directCourses = await getAllDirectCourses();
-          console.log('Courses from direct API:', directCourses);
-
-          if (directCourses && directCourses.length > 0) {
-            // Filter courses by instructor ID if user is available
-            const instructorCourses = currentUserId
-              ? directCourses.filter(course => {
-                // Check different possible instructor ID fields
-                return course.instructor_id === currentUserId ||
-                  course.instructorId === currentUserId ||
-                  (course.instructor && course.instructor.id === currentUserId);
-              })
-              : directCourses;
-
-            console.log('Filtered instructor courses from direct API:', instructorCourses);
-
-            // Sort by creation date (newest first)
-            const sortedCourses = instructorCourses.sort((a, b) => {
-              return new Date(b.createdAt || b.updatedAt || 0) - new Date(a.createdAt || a.updatedAt || 0);
-            });
-
-            setCourses(sortedCourses);
-            setFilteredCourses(sortedCourses);
-
-            // Also update localStorage with these courses
-            localStorage.setItem('courses', JSON.stringify(sortedCourses));
-
-            setIsLoading(false);
-            return;
-          } else {
-            console.log('No courses from direct API, trying simplified API');
-          }
-        } catch (directApiError) {
-          console.warn('Error fetching from direct API:', directApiError);
-        }
-
-        // Try simplified API if direct API fails or returns no courses
-        try {
-          const simplifiedCourses = await getAllSimpleCourses();
-          console.log('Courses from simplified API:', simplifiedCourses);
-
-          if (simplifiedCourses && simplifiedCourses.length > 0) {
-            // Filter courses by instructor ID if user is available
-            const instructorCourses = currentUserId
-              ? simplifiedCourses.filter(course => {
-                // Check different possible instructor ID fields
-                return course.instructor_id === currentUserId ||
-                  course.instructorId === currentUserId ||
-                  (course.instructor && course.instructor.id === currentUserId);
-              })
-              : simplifiedCourses;
-
-            console.log('Filtered instructor courses from simplified API:', instructorCourses);
-
-            // Sort by creation date (newest first)
-            const sortedCourses = instructorCourses.sort((a, b) => {
-              return new Date(b.createdAt || b.updatedAt || 0) - new Date(a.createdAt || a.updatedAt || 0);
-            });
-
-            setCourses(sortedCourses);
-            setFilteredCourses(sortedCourses);
-
-            // Also update localStorage with these courses
-            localStorage.setItem('courses', JSON.stringify(sortedCourses));
-
-            setIsLoading(false);
-            return;
-          }
-        } catch (simplifiedApiError) {
-          console.warn('Error fetching from simplified API:', simplifiedApiError);
-        }
-
-        // Fallback to localStorage via sync function
-        const allCourses = await syncCourses();
-
-        // Filter courses by instructor ID if user is available
-        const instructorCourses = currentUserId
-          ? allCourses.filter(course => {
-            // Check different possible instructor ID fields
-            return course.instructor_id === currentUserId ||
-              course.instructorId === currentUserId ||
-              (course.instructor && course.instructor.id === currentUserId);
-          })
-          : allCourses;
-
-        console.log('Filtered instructor courses from localStorage:', instructorCourses);
-
-        // Sort by creation date (newest first)
-        const sortedCourses = instructorCourses.sort((a, b) => {
-          return new Date(b.createdAt || b.updatedAt || 0) - new Date(a.createdAt || a.updatedAt || 0);
-        });
-
-        setCourses(sortedCourses);
-        setFilteredCourses(sortedCourses);
-      } catch (error) {
-        console.error('Error loading courses:', error);
-
-        // Fallback to localStorage if all else fails
+        // Fallback to localStorage
         try {
           const coursesStr = localStorage.getItem('courses');
           if (coursesStr) {
-            const localCourses = JSON.parse(coursesStr);
+            const allCourses = JSON.parse(coursesStr);
 
             // Filter courses by instructor ID if user is available
             const instructorCourses = currentUserId
-              ? localCourses.filter(course => {
+              ? allCourses.filter(course => {
                 // Check different possible instructor ID fields
                 return course.instructor_id === currentUserId ||
                   course.instructorId === currentUserId ||
                   (course.instructor && course.instructor.id === currentUserId);
               })
-              : localCourses;
+              : allCourses;
 
-            console.log('Filtered instructor courses from localStorage fallback:', instructorCourses);
+            console.log('Filtered instructor courses from localStorage:', instructorCourses);
 
-            setCourses(instructorCourses);
-            setFilteredCourses(instructorCourses);
+            // Sort by creation date (newest first)
+            const sortedCourses = instructorCourses.sort((a, b) => {
+              return new Date(b.createdAt || b.updatedAt || 0) - new Date(a.createdAt || a.updatedAt || 0);
+            });
+
+            setCourses(sortedCourses);
+            setFilteredCourses(sortedCourses);
+          } catch (error) {
+            console.error('Error loading courses:', error);
+
+            // Fallback to localStorage if all else fails
+            try {
+              const coursesStr = localStorage.getItem('courses');
+              if (coursesStr) {
+                const localCourses = JSON.parse(coursesStr);
+
+                // Filter courses by instructor ID if user is available
+                const instructorCourses = currentUserId
+                  ? localCourses.filter(course => {
+                    // Check different possible instructor ID fields
+                    return course.instructor_id === currentUserId ||
+                      course.instructorId === currentUserId ||
+                      (course.instructor && course.instructor.id === currentUserId);
+                  })
+                  : localCourses;
+
+                console.log('Filtered instructor courses from localStorage fallback:', instructorCourses);
+
+                setCourses(instructorCourses);
+                setFilteredCourses(instructorCourses);
+              }
+            } catch (localError) {
+              console.error('Error loading from localStorage:', localError);
+            }
+          } finally {
+            // Ensure loading state is set to false even if there's an error
+            setIsLoading(false);
           }
-        } catch (localError) {
-          console.error('Error loading from localStorage:', localError);
-        }
-      } finally {
-        // Ensure loading state is set to false even if there's an error
-        setIsLoading(false);
-      }
-    };
+        };
 
-    loadCourses();
-  }, [user]);
+        loadCourses();
+      }, [user]);
 
   // Handle search
   useEffect(() => {

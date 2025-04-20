@@ -1,5 +1,7 @@
 "use client";
 
+import { useState, useEffect } from "react";
+import { useParams, useSearchParams } from "next/navigation";
 import { Button, Card, CardBody, CardHeader, Col, Container, Dropdown, DropdownItem, DropdownMenu, DropdownToggle, Nav, NavItem, NavLink, Row, TabContainer, TabContent, TabPane } from "react-bootstrap";
 import Overview from "./Overview";
 import Curriculum from "./Curriculum";
@@ -11,14 +13,12 @@ import Image from "next/image";
 import { FaBookOpen, FaClock, FaCopy, FaFacebookSquare, FaGlobe, FaLinkedin, FaMedal, FaPlay, FaShareAlt, FaSignal, FaStar, FaStopwatch, FaTwitterSquare, FaUserClock } from "react-icons/fa";
 import GlightBox from "@/components/GlightBox";
 import { currency } from "@/context/constants";
-import courseImg1 from '@/assets/images/courses/4by3/01.jpg';
-import courseImg18 from '@/assets/images/courses/4by3/18.jpg';
-import courseImg21 from '@/assets/images/courses/4by3/21.jpg';
+import { courses, users } from '@/data/mockData';
 import Link from "next/link";
-const PricingCard = () => {
+const PricingCard = ({ course }) => {
   return <Card className="shadow p-2 mb-4 z-index-9">
     <div className="overflow-hidden rounded-3">
-      <Image src={courseImg1} className="card-img" alt="course image" />
+      <Image src={course?.image || courses[0]?.image} className="card-img" alt="course image" width={500} height={300} />
       <div className="bg-overlay bg-dark opacity-6" />
       <div className="card-img-overlay d-flex align-items-start flex-column p-3">
         <div className="m-auto">
@@ -62,7 +62,7 @@ const RecentlyViewed = () => {
     <h4 className="mb-3">Recently Viewed</h4>
     <Row className="gx-3 mb-3">
       <Col xs={4}>
-        <Image className="rounded" src={courseImg21} alt="course" />
+        <Image className="rounded" src={courses[1]?.image || courses[0]?.image} alt="course" width={100} height={100} />
       </Col>
       <Col xs={8}>
         <h6 className="mb-0"><Link href="">Fundamentals of Business Analysis</Link></h6>
@@ -76,7 +76,7 @@ const RecentlyViewed = () => {
     </Row>
     <Row className="gx-3">
       <Col xs={4}>
-        <Image className="rounded" src={courseImg18} alt="course" />
+        <Image className="rounded" src={courses[2]?.image || courses[0]?.image} alt="course" width={100} height={100} />
       </Col>
       <Col xs={8}>
         <h6 className="mb-0"><Link href="">The Complete Video Production Bootcamp</Link></h6>
@@ -91,7 +91,10 @@ const RecentlyViewed = () => {
   </Card>;
 };
 const PopularTags = () => {
-  const tags = ["blog", "business", "theme", "bootstrap", "data science", "web development", "tips", "machine learning"];
+  // Extract tags from our centralized mock data
+  const allTags = courses.flatMap(course => course.tags || []);
+  const uniqueTags = [...new Set(allTags)];
+  const tags = uniqueTags.length > 0 ? uniqueTags : ["blog", "business", "theme", "bootstrap", "data science", "web development", "tips", "machine learning"];
   return <Card className="card-body shadow p-4">
     <h4 className="mb-3">Popular Tags</h4>
     <ul className="list-inline mb-0">
@@ -99,102 +102,177 @@ const PopularTags = () => {
     </ul>
   </Card>;
 };
-const CourseDetails = ({ course }) => {
-  return <section className="pb-0 py-lg-5">
-    <Container>
-      <Row>
-        <Col lg={8}>
-          <Card className="shadow rounded-2 p-0">
-            <TabContainer defaultActiveKey='overview'>
-              <CardHeader className="border-bottom px-4 py-3">
-                <Nav className="nav-pills nav-tabs-line py-0" id="course-pills-tab" role="tablist">
-                  <NavItem className="me-2 me-sm-4" role="presentation">
-                    <NavLink as='button' eventKey='overview' className="mb-2 mb-md-0" type="button" role="tab">Overview</NavLink>
-                  </NavItem>
-                  <NavItem className="me-2 me-sm-4" role="presentation">
-                    <NavLink as='button' eventKey='curriculum' className="mb-2 mb-md-0" type="button" role="tab">Curriculum</NavLink>
-                  </NavItem>
-                  <NavItem className="me-2 me-sm-4" role="presentation">
-                    <NavLink as='button' eventKey='instructor' className="mb-2 mb-md-0" type="button" role="tab">Instructor</NavLink>
-                  </NavItem>
-                  <NavItem className="me-2 me-sm-4" role="presentation">
-                    <NavLink as='button' eventKey='reviews' className="mb-2 mb-md-0" type="button" role="tab">Reviews</NavLink>
-                  </NavItem>
-                  <NavItem className="me-2 me-sm-4" role="presentation">
-                    <NavLink as='button' eventKey='faqs' className="mb-2 mb-md-0" type="button" role="tab">FAQs </NavLink>
-                  </NavItem>
-                  <NavItem className="me-2 me-sm-4" role="presentation">
-                    <NavLink as='button' eventKey='comment' className="mb-2 mb-md-0" type="button" role="tab">Comment</NavLink>
-                  </NavItem>
-                </Nav>
-              </CardHeader>
-              <CardBody className="p-4">
-                <TabContent className="pt-2" id="course-pills-tabContent">
-                  <TabPane eventKey="overview" className="fade" role="tabpanel">
-                    <Overview course={course} />
-                  </TabPane>
-                  <TabPane eventKey="curriculum" className="fade" role="tabpanel">
-                    <Curriculum />
-                  </TabPane>
-                  <TabPane eventKey="instructor" className="fade" role="tabpanel">
-                    <Instructor />
-                  </TabPane>
-                  <TabPane eventKey="reviews" className="fade" role="tabpanel">
-                    <Reviews courseId={course?.id} />
-                  </TabPane>
-                  <TabPane eventKey="faqs" className="fade" role="tabpanel">
-                    <Faqs />
-                  </TabPane>
-                  <TabPane eventKey="comment" className="fade" role="tabpanel">
-                    <Comment />
-                  </TabPane>
-                </TabContent>
-              </CardBody>
-            </TabContainer>
-          </Card>
-        </Col>
-        <Col lg={4} className="pt-5 pt-lg-0">
-          <Row className="mb-5 mb-lg-0">
-            <Col md={6} lg={12}>
-              <PricingCard />
-              <Card className="card-body shadow p-4 mb-4">
-                <h4 className="mb-3">This course includes</h4>
-                <ul className="list-group list-group-borderless">
-                  <li className="list-group-item d-flex justify-content-between align-items-center">
-                    <span className="h6 fw-light mb-0"><FaBookOpen className="fa-fw text-primary me-1" />Lectures</span>
-                    <span>30</span>
-                  </li>
-                  <li className="list-group-item d-flex justify-content-between align-items-center">
-                    <span className="h6 fw-light mb-0"><FaClock className="fa-fw text-primary me-1" />Duration</span>
-                    <span>4h 50m</span>
-                  </li>
-                  <li className="list-group-item d-flex justify-content-between align-items-center">
-                    <span className="h6 fw-light mb-0"><FaSignal className="fa-fw text-primary me-1" />Skills</span>
-                    <span>Beginner</span>
-                  </li>
-                  <li className="list-group-item d-flex justify-content-between align-items-center">
-                    <span className="h6 fw-light mb-0"><FaGlobe className="fa-fw text-primary me-1" />Language</span>
-                    <span>English</span>
-                  </li>
-                  <li className="list-group-item d-flex justify-content-between align-items-center">
-                    <span className="h6 fw-light mb-0"><FaUserClock className="fa-fw text-primary me-1" />Deadline</span>
-                    <span>Nov 30 2021</span>
-                  </li>
-                  <li className="list-group-item d-flex justify-content-between align-items-center">
-                    <span className="h6 fw-light mb-0"><FaMedal className="fa-fw text-primary me-1" />Certificate</span>
-                    <span>Yes</span>
-                  </li>
-                </ul>
-              </Card>
-            </Col>
-            <Col md={6} lg={12}>
-              <RecentlyViewed />
-              <PopularTags />
-            </Col>
-          </Row>
-        </Col>
-      </Row>
-    </Container>
-  </section>;
+const CourseDetails = () => {
+  const params = useParams();
+  const searchParams = useSearchParams();
+  const [course, setCourse] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Get course ID from URL params or search params
+  const courseId = params?.id || searchParams.get('id') || '1';
+
+  useEffect(() => {
+    const fetchCourseData = async () => {
+      try {
+        setLoading(true);
+        // Find the course by ID from our centralized mock data
+        if (courses && courses.length > 0) {
+          // Find the course by ID or use the first course as fallback
+          const courseData = courses.find(c => c.id === courseId) || courses[0];
+          console.log('Found course by ID:', courseId, courseData);
+
+          // If instructor_id exists but instructor object doesn't, add it
+          if (courseData.instructor_id && !courseData.instructor) {
+            const instructor = users.find(user => user.id === courseData.instructor_id);
+            if (instructor) {
+              courseData.instructor = instructor;
+              console.log('Added instructor to course:', instructor);
+            }
+          }
+
+          console.log('Setting course data:', courseData);
+          setCourse(courseData);
+        } else {
+          setError('No courses found');
+        }
+      } catch (err) {
+        console.error('Error fetching course data:', err);
+        setError('Failed to load course data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCourseData();
+  }, [courseId]);
+
+  if (loading) {
+    return (
+      <section className="pb-0 py-lg-5">
+        <Container>
+          <div className="text-center py-5">
+            <div className="spinner-border text-primary" role="status">
+              <span className="visually-hidden">Loading...</span>
+            </div>
+            <p className="mt-3">Loading course details...</p>
+          </div>
+        </Container>
+      </section>
+    );
+  }
+
+  if (error || !course) {
+    return (
+      <section className="pb-0 py-lg-5">
+        <Container>
+          <div className="text-center py-5">
+            <div className="alert alert-warning">
+              <p className="mb-0">{error || 'Course not found'}</p>
+            </div>
+          </div>
+        </Container>
+      </section>
+    );
+  }
+
+  return (
+    <section className="pb-0 py-lg-5">
+      <Container>
+        <Row>
+          <Col lg={8}>
+            <Card className="shadow rounded-2 p-0">
+              <TabContainer defaultActiveKey='overview'>
+                <CardHeader className="border-bottom px-4 py-3">
+                  <Nav className="nav-pills nav-tabs-line py-0" id="course-pills-tab" role="tablist">
+                    <NavItem className="me-2 me-sm-4" role="presentation">
+                      <NavLink as='button' eventKey='overview' className="mb-2 mb-md-0" type="button" role="tab">Overview</NavLink>
+                    </NavItem>
+                    <NavItem className="me-2 me-sm-4" role="presentation">
+                      <NavLink as='button' eventKey='curriculum' className="mb-2 mb-md-0" type="button" role="tab">Curriculum</NavLink>
+                    </NavItem>
+                    <NavItem className="me-2 me-sm-4" role="presentation">
+                      <NavLink as='button' eventKey='instructor' className="mb-2 mb-md-0" type="button" role="tab">Instructor</NavLink>
+                    </NavItem>
+                    <NavItem className="me-2 me-sm-4" role="presentation">
+                      <NavLink as='button' eventKey='reviews' className="mb-2 mb-md-0" type="button" role="tab">Reviews</NavLink>
+                    </NavItem>
+                    <NavItem className="me-2 me-sm-4" role="presentation">
+                      <NavLink as='button' eventKey='faqs' className="mb-2 mb-md-0" type="button" role="tab">FAQs </NavLink>
+                    </NavItem>
+                    <NavItem className="me-2 me-sm-4" role="presentation">
+                      <NavLink as='button' eventKey='comment' className="mb-2 mb-md-0" type="button" role="tab">Comment</NavLink>
+                    </NavItem>
+                  </Nav>
+                </CardHeader>
+                <CardBody className="p-4">
+                  <TabContent className="pt-2" id="course-pills-tabContent">
+                    <TabPane eventKey="overview" className="fade" role="tabpanel">
+                      <Overview course={course} />
+                    </TabPane>
+                    <TabPane eventKey="curriculum" className="fade" role="tabpanel">
+                      <Curriculum course={course} />
+                    </TabPane>
+                    <TabPane eventKey="instructor" className="fade" role="tabpanel">
+                      <Instructor course={course} />
+                    </TabPane>
+                    <TabPane eventKey="reviews" className="fade" role="tabpanel">
+                      <Reviews courseId={course?.id} />
+                    </TabPane>
+                    <TabPane eventKey="faqs" className="fade" role="tabpanel">
+                      <Faqs course={course} />
+                    </TabPane>
+                    <TabPane eventKey="comment" className="fade" role="tabpanel">
+                      <Comment />
+                    </TabPane>
+                  </TabContent>
+                </CardBody>
+              </TabContainer>
+            </Card>
+          </Col>
+          <Col lg={4} className="pt-5 pt-lg-0">
+            <Row className="mb-5 mb-lg-0">
+              <Col md={6} lg={12}>
+                <PricingCard course={course} />
+                <Card className="card-body shadow p-4 mb-4">
+                  <h4 className="mb-3">This course includes</h4>
+                  <ul className="list-group list-group-borderless">
+                    <li className="list-group-item d-flex justify-content-between align-items-center">
+                      <span className="h6 fw-light mb-0"><FaBookOpen className="fa-fw text-primary me-1" />Lectures</span>
+                      <span>{course.totalLectures || 30}</span>
+                    </li>
+                    <li className="list-group-item d-flex justify-content-between align-items-center">
+                      <span className="h6 fw-light mb-0"><FaClock className="fa-fw text-primary me-1" />Duration</span>
+                      <span>{course.estimatedDuration ? `${Math.floor(course.estimatedDuration / 60)}h ${course.estimatedDuration % 60}m` : '4h 50m'}</span>
+                    </li>
+                    <li className="list-group-item d-flex justify-content-between align-items-center">
+                      <span className="h6 fw-light mb-0"><FaSignal className="fa-fw text-primary me-1" />Skills</span>
+                      <span>{course.level || 'Beginner'}</span>
+                    </li>
+                    <li className="list-group-item d-flex justify-content-between align-items-center">
+                      <span className="h6 fw-light mb-0"><FaGlobe className="fa-fw text-primary me-1" />Language</span>
+                      <span>{course.language || 'English'}</span>
+                    </li>
+                    <li className="list-group-item d-flex justify-content-between align-items-center">
+                      <span className="h6 fw-light mb-0"><FaUserClock className="fa-fw text-primary me-1" />Deadline</span>
+                      <span>Nov 30 2021</span>
+                    </li>
+                    <li className="list-group-item d-flex justify-content-between align-items-center">
+                      <span className="h6 fw-light mb-0"><FaMedal className="fa-fw text-primary me-1" />Certificate</span>
+                      <span>Yes</span>
+                    </li>
+                  </ul>
+                </Card>
+              </Col>
+              <Col md={6} lg={12}>
+                <RecentlyViewed />
+                <PopularTags />
+              </Col>
+            </Row>
+          </Col>
+        </Row>
+      </Container>
+    </section>
+  );
 };
 export default CourseDetails;
